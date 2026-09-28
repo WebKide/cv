@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="manifest" href="site.webmanifest"/>
+  <meta name="theme-color" content="#0d0d0d"/>
+  <meta name="darkreader-lock">
+  <link rel="apple-touch-icon" href="img/icons/apple-touch-icon.png"/>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>Cancionero Vaiṣṇava v2.01</title>
+  <meta name="author" content="WebKide" />
+
+  <!-- Onsen UI JS runtime only — still needed for ons-page/ons-toolbar/
+       ons-list-item/etc. custom elements and ons.notification.* dialogs.
+       Its CSS bundle and the old safe-area patch file are now folded
+       into styles.css and are no longer linked here. -->
+  <script src="js/dependencies/offline-onsenui.js"></script>
+
+  <!-- New: SPA page-stack layout (replaces what ons-navigator used to handle) -->
+  <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <script>
+  if ('serviceWorker' in navigator) {
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // Reload once when a service worker takes control.
+      window.location.reload();
+    });
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'SW_INSTALL_FAILED') {
+        console.error('SW install failed:', event.data.error);
+        alert('Esta aplicación no se ha podido instalar correctamente para usar sin connexión (' + event.data.error + '). Por favor instalar nuevamente, es posible que tengas que eliminar por completo antes de actualizar.');
+      }
+    });
+
+    window.addEventListener('load', async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('sw.js');
+        console.log('SW registered:', registration.scope);
+      } catch (err) {
+        console.error('SW registration failed:', err);
+      }
+    });
+
+  }
+  </script>
+</head>
+
+<body>
+  <!-- Root container that our custom router renders pages into. -->
+  <div id="app"></div>
+
+  <!-- The element existing code refers to as document.getElementById("navigator").
+  js/router.js attaches pushPage/popPage/replacePage/resetToPage/topPage onto it, so any old call site written against ons-navigator's API keeps working. -->
+  <div id="navigator" style="display:none;"></div>
+
+  <!-- ======================================================== -->
+  <!-- TEMPLATES — plain <template> tags, cloned by router.js    -->
+  <!-- Each root node needs class="page" for router to show/hide -->
+  <!-- ======================================================== -->
+
+  <!-- Root shell: Home + Lists tabs live here permanently; everything else is pushed on top of it as a modal-style page. -->
+  <template id="tmpl-shell" class="main">
+    <ons-page class="page" id="shell_page" data-init-fn="shell_page_init">
+      <div class="page__content shell__content">
+
+        <!-- ===== Home tab ===== -->
+        <div id="tab-home">
+          <div class="gutter">
+
+            <div id="search-trigger" class="search-bar">
+              <svg class="search-icon" viewBox="0 0 24 24" 
+                   aria-hidden="true" focusable="false">
+                <path d="m23 21.3-7.6-7.6c1-1.3 1.6-3 1.6-4.7 0-4.4-3.6-7.9-7.9-7.9C4.6 1 1 4.6 1 8.9c0 4.4 3.6 7.9 7.9 7.9 1.8 0 3.4-.6 4.7-1.5l7.7 7.7zM8.9 14.4c-3 0-5.5-2.5-5.5-5.5s2.5-5.5 5.5-5.5 5.5 2.5 5.5 5.5c0 3.1-2.4 5.5-5.5 5.5"/>
+              </svg>
+              <span class="search-placeholder">Buscar</span>
+            </div>
+
+            <ons-list>
+              <ons-list-header id="recentHeader" style="display:none;">
+                <div class="left">
+                  <svg class="sort-icon"
+                       viewBox="0 0 24 24"
+                       height="32px"
+                       width="32px"
+                       fill="var(--highlight-color)"
+                       aria-hidden="true"
+                       focusable="false">
+                    <path d="M2 17 5.7 7h2.2l3.8 10H9.6l-.9-2.4H4.9L4.1 17zm3.5-4.1h2.6L6.9 9.2h-.2zm8.2 4.1v-1.9l5.1-6.3h-4.9V7H21v1.9l-5 6.3h5V17zM9 5l3-3 3 3zm3 17-3-3h6z"/>
+                  </svg>
+                </div>
+               Recientes
+              </ons-list-header>
+              <div id="recents" class="glassy">
+                <!-- Add this above <div id="recents-items"> -->
+                <div id="recents-actions" style="display: flex; align-items: center; justify-content: center; position: relative; padding: 10px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+                  <div style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center;">
+                    <svg class="recents-icon"
+                         viewBox="0 0 24 24"
+                         height="24px"
+                         width="24px"
+                         fill="var(--highlight-color)"
+                         aria-hidden="true"
+                         focusable="false">
+                      <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                    </svg>
+                  </div>
+                  <div style="font-size: 12px; font-weight: bold; letter-spacing: 1px; opacity: 0.6;">CANCIONES RECIENTES</div>
+                  <ons-toolbar-button id="recentsMenuBtn" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--highlight-color)">
+                      <path d="M6 10h9V6H6zm11-7H5c-.5 0-1 .2-1.4.6S3 4.5 3 5v14c0 .5.2 1 .6 1.4s.9.6 1.4.6h14c.5 0 1-.2 1.4-.6s.6-.9.6-1.4V7zm2 16H5V5h11.2L19 7.8zm-7-7c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3"/>
+                    </svg>
+                  </ons-toolbar-button>
+                </div>
+                <div id="recents-items" class="recents-scroll"></div>
+              </div>
+            </ons-list>
+
+            <ons-list class="glassy" style="margin-top: 15px;">
+
+              <ons-list-item>
+                <div style="text-align:center;">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       class="home-logotype"
+                       viewBox="0 0 512 112"
+                       fill="var(--highlight-color)"
+                       aria-hidden="true"
+                       focusable="false">
+                    <path d="M241.8 19.3a6.9 6.9 0 0 0-1.5 4.4c0 4.7 4.1 7.6 8.6 7.6 7.5 0 11.8-5.3 11.8-12.6C260.7 6 250.5 0 238.9 0c-10.9 0-21.3 7-21.3 18.7 0 3.1 2.2 11.3 4.7 13.2a17.4 17.4 0 0 0-3.9-.5c-18.2 0-26.9 11.6-26.9 29 0 15.6 8.4 28.5 25.2 28.5 10.6 0 17.2-4.8 21.8-14.3l-2.6-1.4c-2.8 4.5-8.1 6.9-13.3 6.9-12.3 0-16.9-12.8-16.9-23.1 0-6.2 1.4-22 10.1-22 9.9 0 4.3 16.6 14.9 16.6 3.6 0 6.8-2.3 6.8-6 0-5.9-4.6-8.5-8.7-11.7-3.8-2.9-6.7-9.8-6.7-14.4 0-8.9 6.3-14.9 15.2-14.9 5.4 0 11.7 2.5 11.7 8.8-.1 4.1-2.9 6.7-7.2 5.9m17.6 58.6V32.6l-18.9 5.9V42c4 0 5.4 1.5 5.4 5.4v30.4c0 4-1.5 5.4-5.4 5.4V87h24.4v-3.8c-4 .2-5.5-1.3-5.5-5.3m-74-.1V46.6c0-11.2-7.6-16.1-18-16.1-6 0-12.1 1.7-15.8 6.7v-5.5l-19.3 6v3.6c4.1 0 5.5 1.6 5.5 5.5v31c0 4.1-1.5 5.5-5.5 5.5V87h24.9v-3.7c-4.1 0-5.5-1.6-5.5-5.5V46.9c0-5.3 5.1-11.8 10.7-11.8 6.5 0 9.5 5.9 9.5 11.8v31c0 4.1-1.6 5.5-5.5 5.5V87h24.9v-3.6c-4.3 0-5.92-1.6-5.92-5.6Zm-59.1 4.5c-2 0-1.9-2.4-1.9-4v-30c0-12.6-8.3-17.8-20.1-17.8-9.4 0-21.6 3.5-21.6 14.9 0 3.4 4 4.5 6.7 4.5 13.7 0 2.2-15.9 14.6-15.9 6.6 0 6.3 7.8 6.3 12.6v7.3a25 25 0 0 0-8.5-1.5c-12.3 0-22.2 6.6-22.2 19.8 0 11.2 9 16.8 19.3 16.8 4.9 0 9.1-1.2 12.7-4.7 1.7 3.1 4.5 4.3 7.8 4.3 4.3 0 8.9-1.3 11.5-5l-1.9-2.4a7 7 0 0 1-2.7 1.1m-15.9-3.8h-.1c0 3.8-4.5 6.4-7.8 6.4-7 0-8.3-7.1-8.3-12.7 0-8 3.8-15.4 12.7-15.4a10.3 10.3 0 0 1 3.5.6ZM486 31.4c-17.7 0-25.9 11.9-25.9 28.6s8.1 29 25.9 29c17.5 0 26-12.6 26-29 0-16.8-8.3-28.6-26-28.6m0 54.4c-10.8 0-11.5-18.2-11.5-25.8s.7-25.4 11.5-25.4 11.6 17.6 11.6 25.3-.8 25.9-11.6 25.9m-4.3-60.6a23.4 23.4 0 0 1 4.5.7c2.9-1.2 4.2-4.2 4.2-7.1a8.61 8.61 0 0 0-8.6-8.6c-12.8 0-30.08 17.22-37 31v-9.4l-19.3 6v3.6c4.1 0 5.5 1.6 5.5 5.5v31c0 4.1-1.6 5.5-5.5 5.5V87h24.9v-3.6c-4.1 0-5.5-1.6-5.5-5.5V47.7c7.83-15.05 24.7-22.5 36.8-22.5m-190.9 6.2c-17.7 0-25.9 11.9-25.9 28.6s8.1 29 25.9 29c17.5 0 26-12.6 26-29 0-16.8-8.3-28.6-26-28.6m7 53.4c-10.4 3-16-14.3-18.1-21.7s-6.3-24.5 4.1-27.6 16 13.7 18.1 21.2 6.4 25.1-4.1 28.1m104.3-53.4c-17.2 0-26.5 12.8-26.5 29.3 0 15.6 9.2 28.3 25.6 28.3 11.7 0 17-6 22.1-15.6l-2.4-1.5c-3.2 4.7-9.6 7.4-15.4 7.4-8.6 0-13-7.6-14.6-15.2l32.4-12.3v-1.2c0-12.1-9.7-19.2-21.2-19.2m7.9 11.4c0 9.6-12.2 14.3-19.5 17.5-.1-1.2-.3-2.5-.3-3.6 0-7.3 3.3-21.1 12.7-21.1a7.11 7.11 0 0 1 7.1 7Zm-15 49.82a6.18 6.18 0 0 0-5.28 2.76c0 5.16-2.28 12.54-8.88 12.54-9.48 0-10.2-13.92-10.2-20.64v-40C370.68 36 363.47 30 352.91 30c-6.12 0-12.71 2.61-16.55 7.77v-5.65l-19.56 6.12v3.6c4.08 0 5.64 1.56 5.64 5.64v30.18c0 4.08-1.56 5.64-5.64 5.64V87H342v-3.7c-4.08 0-5.64-1.56-5.64-5.64V47.48c0-5.4 5.52-12.38 11.16-12.38 6.6 0 9.24 6.5 9.24 12.38v37.4c0 8 2.64 15.36 8.88 20.64A28.37 28.37 0 0 0 384 112c7.56 0 18.84-3.72 18.84-13 0-4.76-3-6.38-7.84-6.38m-353.9-.77c-17.1 0-24.9-20.28-24.9-46.15 0-14.8 6.4-41.6 25.2-41.6 11 0 16.3 9.7 16.3 19.6 0 1.9-1.2 8.6-3.7 8.9.1 4.5 4 6.5 9 6.5 7.9 0 11.5-5.9 11.5-13.3C74.5 8.7 56.8 0 41.7 0 15 0 0 18.7 0 44.6c0 37.37 14.93 52 41.1 52 22.74 0 31.4-13.1 32.1-14.4l2.1-18.7h-4c-5.1 13.25-14.2 28.35-30.2 28.35"/>
+                  </svg>
+                </div>
+              </ons-list-item>
+
+              <ons-list-item modifier="chevron" tappable id="allSongs">
+                <div class="left">
+                  <svg class="search-icon"
+                       viewBox="0 0 24 24"
+                       height="32px"
+                       width="32px"
+                       fill="var(--highlight-color)"
+                       aria-hidden="true"
+                       focusable="false">
+                    <path d="M2 17 5.7 7h2.2l3.8 10H9.6l-.9-2.4H4.9L4.1 17zm3.5-4.1h2.6L6.9 9.2h-.2zm8.2 4.1v-1.9l5.1-6.3h-4.9V7H21v1.9l-5 6.3h5V17zM9 5l3-3 3 3zm3 17-3-3h6z"/>
+                  </svg>
+                </div>
+                Canciones
+              </ons-list-item>
+
+              <ons-list-item modifier="chevron" tappable id="authorsBtn">
+                <div class="left">
+                  <svg class="author-icon"
+                       viewBox="0 0 24 24"
+                       height="32px"
+                       width="32px"
+                       fill="var(--highlight-color)"
+                       aria-hidden="true"
+                       focusable="false">
+                    <path d="M17.3 12.1c0-1.5 1.2-2.7 2.7-2.7.8 0 1.6.4 2.1 1C21.3 4.8 16 1 10.4 1.8c-4.4.7-7.9 4.1-8.5 8.6 1-1.2 2.7-1.3 3.8-.3s1.3 2.7.3 3.8c-.5.6-1.3 1-2.1 1-.7 0-1.4-.3-1.9-.9 1.2 5.5 6.7 9 12.2 7.8 3.9-.9 6.9-3.9 7.8-7.8-.5.5-1.2.8-1.9.9-1.6 0-2.8-1.2-2.8-2.8m-5.3 8c-2.8 0-5.4-1.4-6.9-3.8 2.3-.5 3.8-2.7 3.3-5.1-.3-1.7-1.8-3.1-3.6-3.3C7 3.9 12 2.5 16 4.7c1.4.8 2.5 1.9 3.2 3.2-2.3.3-4 2.5-3.7 4.8.2 1.8 1.6 3.3 3.4 3.6-1.5 2.4-4.1 3.8-6.9 3.8m1.1-9.5c-.1.6-.6 1-1.1.9-.5 0-.9-.4-.9-.9V4.2h-.9v6.6c.1.8.6 1.5 1.5 1.7-.8.2-1.4.9-1.4 1.8s1.4 3.6 1.7 4.4c0 .1 0 .1.1.1h.1l.1-.1c.4-.8 1.7-3.5 1.7-4.4 0-.8-.6-1.6-1.4-1.8.8-.2 1.4-.9 1.5-1.7V4.2h-.9z"/>
+                  </svg>
+                </div>
+                Autores
+              </ons-list-item>
+
+              <ons-list-item modifier="chevron" tappable id="pronounceGuide">
+                <div class="left">
+                  <svg class="eq-icon"
+                       viewBox="0 0 24 24"
+                       height="32px"
+                       width="32px"
+                       fill="var(--highlight-color)"
+                       aria-hidden="true"
+                       focusable="false">
+                    <path d="M18.9 16.6c-1.3-1.3-2.2-1.8-3.9-1.8-2 0-3.8 2.5-3.8 2.5l-.3-.4s.6-.7.6-1.3c0-.9-.9-1.7-1.7-2.4s-2-1.7-3.1-.9c-.6.4-.9 1.1-1 1.7-.2.2 1.6 1.7 1.6 1.7.7-2.4 2.2-2 2.2-2s.3 1.4-1.7 2.4c0 0 1.5 1.9 1.7 1.7.2-.1.5-.4.5-.4s.5.1.8.2c.6 1.2-.4 3.5-2.6 3.5-1.2.1-4.2-1-4.2-4.2 0-4.2 3.2-6 7.1-10.2.5-.5 1.4-1.1 1.4-1.8 0-1.8-1.9-3.4-2.7-3.7-.6-.3-1.5-.2-2.2 0-.1-.1 1.6 1.8 1.8 1.7s1.2-.5 1.4-.2c.4.5-.7 1.7-1 1.9-2.3 2.2-7.3 5.9-7.3 10.1C2.5 20 6.6 23 9.3 23c4.1 0 3.7-2.9 3.4-3.7.5-.7 2.2-2.9 3.8-2.9.7-.1 1.3.1 1.8.3.5 1.4-1.2 3.5-3.1 3.5-.8.1-1.4-.8-1.4-1 0 .2-.3.6-.1 1 .4.6 1.3 1.7 2.1 1.8 1.5.4 3.4-.5 4.1-1.8.7-1.5-.1-2.6-1-3.6m-4.5-4.4c-3.6.6-2.9-1.9-4.8-2.5.5 1.2 2.7 4.3 5.9 4.3.7 0 2.9-.2 2.9-2.1 0-.4-1.5-1.6-1.7-1.7-.1 1.2-1.3 1.8-2.3 2m-.5-.6c.3-.4.9-1.1 1.2-1.5 0-.1-1-1.2-1.7-1.7-.3.4-.9 1.1-1.2 1.5-.1.1 1.6 1.9 1.7 1.7"/>
+                  </svg>
+                </div>
+                Pronunciación
+              </ons-list-item>
+
+              <ons-list-item modifier="chevron" tappable id="settingsBtn">
+                <div class="left">
+                  <svg class="settings-icon"
+                       viewBox="0 0 24 24"
+                       height="32px"
+                       width="32px"
+                       fill="var(--highlight-color)"
+                       aria-hidden="true"
+                       focusable="false">
+                    <path d="M20.7,13.4l-1-0.8c0-0.1-0.4-0.5,0-1.1l1-0.8c0.7-0.6,0.9-1.6,0.4-2.4L19.8,6c-0.5-0.8-1.4-1.1-2.3-0.8l-1.2,0.5 c-0.1,0-0.6,0.1-0.9-0.5l-0.2-1.3c-0.2-0.9-0.9-1.6-1.9-1.6h-2.6C9.8,2.3,9,2.9,8.9,3.8L8.6,5.1C8.6,5.2,8.4,5.7,7.7,5.6L6.5,5.2 C5.6,4.9,4.7,5.2,4.2,6L2.9,8.2C2.4,9,2.6,10,3.3,10.6l1,0.8c0,0.1,0.4,0.5,0,1.1l-1,0.8C2.6,14,2.4,15,2.9,15.8L4.2,18 c0.5,0.8,1.4,1.1,2.3,0.8l1.2-0.5c0.1,0,0.6-0.1,0.9,0.5l0.2,1.3c0.2,0.9,0.9,1.6,1.9,1.6h2.6c0.9,0,1.7-0.7,1.9-1.6l0.2-1.3 c0.1-0.1,0.2-0.6,0.9-0.5l1.2,0.5c0.9,0.3,1.8,0,2.3-0.8l1.3-2.2C21.6,15,21.4,14,20.7,13.4z M12,15.8c-2.1,0-3.8-1.7-3.8-3.8 c0-2.1,1.7-3.8,3.8-3.8c2.1,0,3.8,1.7,3.8,3.8C15.8,14.1,14.1,15.8,12,15.8z"/>
+                  </svg>
+                </div>
+                Ajustes
+              </ons-list-item>
+
+            </ons-list>
+            <div class="default_img_container" style="display:block; padding-top:15px; text-align:center;">
+              <div class="home-image-wrap">
+                <img src="img/home_default.png" alt="Home">
+                <div class="home-image-caption">
+                  <span class="home-image-heading" 
+                        id="appVersionCaption">Cancionero v2.01</span>
+                  <span class="home-image-subtitle">por WebKide</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- ===== Lists tab ===== -->
+        <div id="tab-lists" style="display:none;">
+          <div class="gutter">
+            <!-- 1. CREATE A LIST -->
+            <ons-list style="margin-top: 15px;">
+              <ons-list-item id="createListBtn" tappable modifier="md-outline" style="margin-top: 10px;">
+                <ons-icon icon="md-collection-plus"></ons-icon>
+                Crea una nueva lista
+              </ons-list-item>
+              <div id="custom-lists" class="glassy"></div>
+            </ons-list>
+
+            <!-- 2. LISTS BY TATTVA — plain title, outside every box
+            <div class="list-header--material" style="text-align:center; opacity:.6; font-size:16px; font-weight:700; width:100%; margin-top:16px; color: var(--highlight-color);">
+              Lists by tattva
+            </div> -->
+
+            <!-- 3. QUICK SHORTCUTS -->
+            <ons-list style="margin: 15px 0; top:10;right:0;bottom:10;left:0;">
+              <ons-list-header style="text-align:center; opacity:.6; font-size:1.02rem; font-width:700; width:100%; margin:16px 0 8px 0; color: var(--highlight-color);">Atajos Rápidos</ons-list-header>
+              <div id="quick-shortcuts" class="glassy"></div>
+            </ons-list>
+
+            <!-- 4. SONGS ARRANGED BY TATTVA -->
+            <ons-list style="margin: 15px 0;">
+              <ons-list-header style="text-align:center; opacity:.6; font-size:1.02rem; font-width:700; width:100%; margin:16px 0 8px 0; color: var(--highlight-color);">Listas por tattva</ons-list-header>
+              <div id="tattva-songs" class="glassy"></div>
+            </ons-list>
+
+            <!-- 5. ĀRATI & PŪJĀ -->
+            <ons-list style="margin: 15px 0;">
+              <ons-list-header style="text-align:center; opacity:.6; font-size:1.02rem; font-width:700; width:100%; margin:16px 0 8px 0; color: var(--highlight-color);">Ārati & Pūjā</ons-list-header>
+              <div id="arati-lists" class="glassy"></div>
+            </ons-list>
+
+            <!-- 6. GALLERY -->
+            <ons-list style="margin: 15px 0;">
+              <ons-list-header style="text-align:center; opacity:.6; font-size:1.02rem; font-width:700; width:100%; margin:16px 0 8px 0; color: var(--highlight-color);">Galería Gauḍīya</ons-list-header>
+              <div id="gallery-section"></div>
+            </ons-list>
+          </div>
+        </div>
+      </div>
+
+      <ons-tabbar class="bottom-tabbar" position="bottom">
+        <div class="bottom-tabbar__row">
+          <button id="tabBtnHome" class="tabbar-btn active">
+            <div class="left">
+              <svg class="home-icon"
+                   viewBox="0 0 24 24"
+                   height="24px"
+                   width="24px"
+                   fill="currentColor"
+                   aria-hidden="true"
+                   focusable="false">
+                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8 M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              </svg>
+            </div>
+            <span>Inicio</span>
+          </button>
+          <button id="tabBtnLists" class="tabbar-btn">
+            <div class="left">
+              <svg class="lists-icon"
+                   viewBox="0 0 24 24"
+                   height="24px"
+                   width="24px"
+                   fill="currentColor"
+                   aria-hidden="true"
+                   focusable="false">
+                <path d="M3 18c-.6 0-1 .4-1 1s.5 1 1 1 1-.4 1-1-.4-1-1-1m0-7c-.6 0-1 .4-1 1s.5 1 1 1 1-.4 1-1-.4-1-1-1m5.4-4.3h12.2c.8 0 1.4-.6 1.4-1.4 0-.7-.7-1.3-1.4-1.3H8.4C7.6 4 7 4.6 7 5.4c0 .7.6 1.3 1.4 1.3m0 6.7h12.3c.8 0 1.4-.6 1.4-1.4s-.6-1.4-1.4-1.4H8.4c-.8 0-1.4.6-1.4 1.4s.6 1.4 1.4 1.4M3 4c-.6 0-1 .4-1 1s.5 1 1 1 1-.4 1-1-.4-1-1-1m17.6 13.3H8.4c-.8 0-1.4.6-1.4 1.4 0 .7.6 1.3 1.4 1.3h12.3c.8 0 1.4-.6 1.4-1.4-.1-.7-.7-1.3-1.5-1.3"/>
+              </svg>
+            </div>
+            <span>Listas</span>
+          </button>
+        </div>
+      </ons-tabbar>
+
+      <ons-popover id="recentsPopover" cancelable cover-target>
+        <ons-list>
+          <ons-list-item id="btn-clear-recents" tappable modifier="nodivider">
+            <div class="left">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="var(--highlight-color)">
+                <path d="M15 18v-2h4v2zm0-8V8h7v2zm0 4v-2h6v2zM3 8H2V6h4V4.5h4V6h4v2h-1v9c0 .6-.2 1-.6 1.4s-.8.6-1.4.6H5c-.6 0-1-.2-1.4-.6S3 17.6 3 17zm2 0v9h6V8zm0 0v9z"/>
+              </svg>
+            </div>
+            <div class="center">Borrar Recientes</div>
+          </ons-list-item>
+          <ons-list-item id="btn-create-list-from-recents" tappable modifier="nodivider">
+            <div class="left">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="var(--highlight-color)">
+                <path d="M3 16v-2h7v2zm0-4v-2h11v2zm0-4V6h11v2zm13 12v-4h-4v-2h4v-4h2v4h4v2h-4v4z"/>
+              </svg>
+            </div>
+            <div class="center">Crear una Lista</div>
+          </ons-list-item>
+        </ons-list>
+      </ons-popover>
+
+    </ons-page>
+  </template>
+
+  <!-- All songs, alphabetized -->
+  <template id="tmpl-all-songs">
+    <ons-page class="page" id="all_songs_page" data-init-fn="all_songs_page_init">
+      <ons-toolbar modifier="cover-content transparent">
+        <div class="left"><button class="back-btn" onclick="document.getElementById('navigator').popPage()">
+        <div class="left">
+          <svg class="back-icon"
+               viewBox="0 0 24 24"
+               height="24px"
+               width="24px"
+               fill="var(--highlight-color)"
+               aria-hidden="true"
+               focusable="false">
+            <path d="M16.7 23.5 5.2 12 16.7.5l2 2L9.3 12l9.5 9.5z"/>
+          </svg>
+        </div>
+         <span>Volver</span></button></div>
+        <div class="center"><ons-icon icon="md-sort-asc"></ons-icon> Todas en orden alfabético
+          <span id="allSongsTotal" class="song-file-name"></span></div>
+      </ons-toolbar>
+
+      <!-- toTop FAB -->
+      <ons-fab id="toTop"
+               style="transition: all 0.3s;"
+               position="bottom right"
+               class="glassyFloat"
+               onclick="const el = this.closest('.page').querySelector('.page__content'); if(el) el.scrollTo({top:0,behavior:'smooth'})">
+        <svg class="to-top-icon"
+             viewBox="0 0 24 24"
+             height="24px"
+             width="24px"
+             fill="var(--highlight-color)"
+             aria-hidden="true"
+             focusable="false">
+          <path d="M11 16h2v-4.2l1.6 1.6L16 12l-4-4-4 4 1.4 1.4 1.6-1.6zm1 6c-1.4 0-2.7-.3-3.9-.8S5.8 20 4.9 19.1s-1.6-2-2.1-3.2S2 13.4 2 12s.3-2.7.8-3.9S4 5.8 4.9 4.9s2-1.6 3.2-2.1S10.6 2 12 2s2.7.3 3.9.8 2.3 1.2 3.2 2.1 1.6 2 2.1 3.2.8 2.5.8 3.9-.3 2.7-.8 3.9-1.2 2.3-2.1 3.2-2 1.6-3.2 2.1-2.5.8-3.9.8m0-2c2.2 0 4.1-.8 5.7-2.3 1.5-1.5 2.3-3.4 2.3-5.7s-.8-4.1-2.3-5.7C16.1 4.8 14.2 4 12 4s-4.1.8-5.7 2.3S4 9.8 4 12s.8 4.1 2.3 5.7C7.9 19.2 9.8 20 12 20"/>
+        </svg>
+      </ons-fab>
+      <div class="page__content">
+        <div class="gutter">
+          <div id="group-nav" class="group-nav"></div>
+            <ons-list class="glassyEach">
+              <ons-lazy-repeat id="all-songs-list"></ons-lazy-repeat>
+            </ons-list>
+          </div>
+        </div>
+      </div>
+    </ons-page>
+  </template>
+
+  <!-- Group detail — songs for a single Sanskrit letter group -->
+  <template id="tmpl-group-detail">
+    <ons-page class="page" id="group_detail_page" data-init-fn="group_detail_page_init">
+      <ons-toolbar modifier="cover-content transparent">
+        <div class="left">
+          <button class="back-btn" onclick="document.getElementById('navigator').popPage()">
+            <svg class="back-icon" viewBox="0 0 24 24" width="24" height="24" fill="var(--highlight-color)" aria-hidden="true" focusable="false">
+              <path d="M16.7 23.5 5.2 12 16.7.5l2 2L9.3 12l9.5 9.5z"/>
+            </svg>
+            <span>Volver</span>
+          </button>
+        </div>
+        <div class="center"></div>
+      </ons-toolbar>
+
+      <div class="page__content">
+        <div class="gutter">
+          <div id="group-nav" class="group-nav"></div>
+          <ons-list id="group-detail-list" class="glassy"></ons-list>
+        </div>
+      </div>
+    </ons-page>
+  </template>
+
+  <!-- Search (used both standalone and when adding a song to a list) -->
+  <template id="tmpl-search">
+    <ons-page class="page" id="search_page" data-init-fn="search_page_init">
+      <div class="page__content">
+        <div class="gutter">
+          <div class="search-header">
+            <button class="back-btn" onclick="document.getElementById('navigator').popPage()">
+              <svg class="back-icon" viewBox="0 0 24 24" width="24" height="24"
+                   fill="var(--highlight-color)" aria-hidden="true" focusable="false">
+                <path d="M16.7 23.5 5.2 12 16.7.5l2 2L9.3 12l9.5 9.5z"/>
+              </svg>
+              <span>Volver</span>
+            </button>
+            <div class="search-bar">
+              <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="m23 21.3-7.6-7.6c1-1.3 1.6-3 1.6-4.7 0-4.4-3.6-7.9-7.9-7.9C4.6 1 1 4.6 1 8.9c0 4.4 3.6 7.9 7.9 7.9 1.8 0 3.4-.6 4.7-1.5l7.7 7.7zM8.9 14.4c-3 0-5.5-2.5-5.5-5.5s2.5-5.5 5.5-5.5 5.5 2.5 5.5 5.5c0 3.1-2.4 5.5-5.5 5.5"/>
+              </svg>
+              <input type="text" class="search-box" placeholder="Busca la letra"
+                autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="off">
+              <svg class="search-clear" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5l5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <ons-list id="search-list-page">
+          <div id="search-hint-add" class="list-header list-header--material" style="display:none;">
+            <i>Escribe para encontrar una canción y agregarla a tu lista</i>
+          </div>
+          <div class="default_img_container">
+            <img src="img/search_default.png" />
+          </div>
+        </ons-list>
+      </div>
+      <ons-fab id="toTop"
+               style="opacity: 0; pointer-events: none; transition: all 0.3s;"
+               position="bottom right"
+               class="glassyFloat"
+               onclick='document.querySelector("#search_page .page__content").scrollTo({top:0,behavior:"smooth"})'>
+        <svg class="to-top-icon"
+             viewBox="0 0 24 24"
+             height="24px"
+             width="24px"
+             fill="var(--highlight-color)"
+             aria-hidden="true"
+             focusable="false">
+          <path d="M11 16h2v-4.2l1.6 1.6L16 12l-4-4-4 4 1.4 1.4 1.6-1.6zm1 6c-1.4 0-2.7-.3-3.9-.8S5.8 20 4.9 19.1s-1.6-2-2.1-3.2S2 13.4 2 12s.3-2.7.8-3.9S4 5.8 4.9 4.9s2-1.6 3.2-2.1S10.6 2 12 2s2.7.3 3.9.8 2.3 1.2 3.2 2.1 1.6 2 2.1 3.2.8 2.5.8 3.9-.3 2.7-.8 3.9-1.2 2.3-2.1 3.2-2 1.6-3.2 2.1-2.5.8-3.9.8m0-2c2.2 0 4.1-.8 5.7-2.3 1.5-1.5 2.3-3.4 2.3-5.7s-.8-4.1-2.3-5.7C16.1 4.8 14.2 4 12 4s-4.1.8-5.7 2.3S4 9.8 4 12s.8 4.1 2.3 5.7C7.9 19.2 9.8 20 12 20"/>
+        </svg>
+      </ons-fab>
+    </ons-page>
+  </template>
+
+  <!-- Settings -->
+  <template id="tmpl-settings">
+    <ons-page class="page" id="settings_page" data-init-fn="settings_page_init">
+      <ons-toolbar modifier="cover-content transparent">
+        <div class="left">
+            <button class="back-btn" onclick="document.getElementById('navigator').popPage()">
+              <svg
+                class="back-icon"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="var(--highlight-color)"
+                aria-hidden="true"
+                focusable="false">
+                <path d="M16.7 23.5 5.2 12 16.7.5l2 2L9.3 12l9.5 9.5z"/>
+              </svg>
+              <span>Volver</span>
+            </button>
+          </div>
+        <div class="center">Ajustes</div>
+      </ons-toolbar>
+      <div class="page__content">
+        <div class="gutter"></div>
+      </div>
+    </ons-page>
+  </template>
+
+  <template id="tmpl-authors">
+    <ons-page class="page" id="authors_page" data-init-fn="author_page_init">
+      <ons-toolbar modifier="cover-content transparent">
+        <div class="left">
+          <button class="back-btn" onclick="document.getElementById('navigator').popPage()">
+            <svg class="back-icon" viewBox="0 0 24 24" width="24" height="24" fill="var(--highlight-color)" aria-hidden="true" focusable="false">
+              <path d="M16.7 23.5 5.2 12 16.7.5l2 2L9.3 12l9.5 9.5z"/>
+            </svg>
+            <span>Volver</span>
+          </button>
+        </div>
+        <div class="center">Autores Vaiṣṇava</div>
+      </ons-toolbar>
+      <div class="page__content">
+        <div class="gutter">
+          <ons-list id="author-list" class="glassyEach"></ons-list>
+        </div>
+      </div>
+      <ons-fab id="toTop"
+               style="opacity: 0; pointer-events: none; transition: all 0.3s;"
+               position="bottom right"
+               class="glassyFloat"
+               onclick='document.querySelector("#authors_page .page__content").scrollTo({top:0,behavior:"smooth"})'>
+        <svg class="to-top-icon" viewBox="0 0 24 24" height="24px" width="24px" fill="var(--highlight-color)" aria-hidden="true" focusable="false">
+          <path d="M11 16h2v-4.2l1.6 1.6L16 12l-4-4-4 4 1.4 1.4 1.6-1.6zm1 6c-1.4 0-2.7-.3-3.9-.8S5.8 20 4.9 19.1s-1.6-2-2.1-3.2S2 13.4 2 12s.3-2.7.8-3.9S4 5.8 4.9 4.9s2-1.6 3.2-2.1S10.6 2 12 2s2.7.3 3.9.8 2.3 1.2 3.2 2.1 1.6 2 2.1 3.2.8 2.5.8 3.9-.3 2.7-.8 3.9-1.2 2.3-2.1 3.2-2 1.6-3.2 2.1-2.5.8-3.9.8m0-2c2.2 0 4.1-.8 5.7-2.3 1.5-1.5 2.3-3.4 2.3-5.7s-.8-4.1-2.3-5.7C16.1 4.8 14.2 4 12 4s-4.1.8-5.7 2.3S4 9.8 4 12s.8 4.1 2.3 5.7C7.9 19.2 9.8 20 12 20"/>
+        </svg>
+      </ons-fab>
+    </ons-page>
+  </template>
+
+  <!-- Pronunciation guide (static, no audio) -->
+  <template id="tmpl-pronounce">
+    <ons-page class="page" id="pronounce_page" data-init-fn="pronounce_page_init">
+      <ons-toolbar modifier="cover-content transparent">
+        <div class="left">
+            <button class="back-btn" onclick="document.getElementById('navigator').popPage()">
+              <svg
+                class="back-icon"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="var(--highlight-color)"
+                aria-hidden="true"
+                focusable="false">
+                <path d="M16.7 23.5 5.2 12 16.7.5l2 2L9.3 12l9.5 9.5z"/>
+              </svg>
+              <span>Volver</span>
+            </button>
+          </div>
+        <div class="center">Guía de Pronunciación</div>
+      </ons-toolbar>
+      <div class="page__content">
+        <div class="gutter">
+          <ons-list id="pronounce-list" class="glassyEach"></ons-list>
+        </div>
+      </div>
+      <ons-fab id="toTop"
+               style="opacity: 0; pointer-events: none; transition: all 0.3s;"
+               position="bottom right"
+               class="glassyFloat"
+               onclick='document.querySelector("#pronounce_page .page__content").scrollTo({top:0,behavior:"smooth"})'>
+        <svg class="to-top-icon"
+             viewBox="0 0 24 24"
+             height="24px"
+             width="24px"
+             fill="var(--highlight-color)"
+             aria-hidden="true"
+             focusable="false">
+          <path d="M11 16h2v-4.2l1.6 1.6L16 12l-4-4-4 4 1.4 1.4 1.6-1.6zm1 6c-1.4 0-2.7-.3-3.9-.8S5.8 20 4.9 19.1s-1.6-2-2.1-3.2S2 13.4 2 12s.3-2.7.8-3.9S4 5.8 4.9 4.9s2-1.6 3.2-2.1S10.6 2 12 2s2.7.3 3.9.8 2.3 1.2 3.2 2.1 1.6 2 2.1 3.2.8 2.5.8 3.9-.3 2.7-.8 3.9-1.2 2.3-2.1 3.2-2 1.6-3.2 2.1-2.5.8-3.9.8m0-2c2.2 0 4.1-.8 5.7-2.3 1.5-1.5 2.3-3.4 2.3-5.7s-.8-4.1-2.3-5.7C16.1 4.8 14.2 4 12 4s-4.1.8-5.7 2.3S4 9.8 4 12s.8 4.1 2.3 5.7C7.9 19.2 9.8 20 12 20"/>
+        </svg>
+      </ons-fab>
+    </ons-page>
+  </template>
+
+  <!-- Single list detail -->
+  <template id="tmpl-list">
+    <ons-page class="page" id="list_page" data-init-fn="list_page_init">
+      <ons-toolbar modifier="cover-content transparent">
+        <div class="left">
+          <button class="back-btn" onclick="document.getElementById('navigator').popPage()">
+            <svg
+              class="back-icon"
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+              fill="var(--highlight-color)"
+              aria-hidden="true"
+              focusable="false">
+              <path d="M16.7 23.5 5.2 12 16.7.5l2 2L9.3 12l9.5 9.5z"/>
+            </svg>
+            <span>Volver</span>
+          </button>
+        </div>
+        <div class="center"></div>
+        <div class="right">
+          <button id="listMenuBtn" class="listMenuDelBtn">
+            <ons-icon icon="md-more-vert">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff" aria-hidden="true" focusable="false">
+                <path d="M15 18v-2h4v2zm0-8V8h7v2zm0 4v-2h6v2zM3 8H2V6h4V4.5h4V6h4v2h-1v9c0 .6-.2 1-.6 1.4s-.8.6-1.4.6H5c-.6 0-1-.2-1.4-.6S3 17.6 3 17zm2 0v9h6V8zm0 0v9z"/>
+              </svg>
+            </ons-icon>
+          </button>
+        </div>
+      </ons-toolbar>
+      <div class="page__content">
+        <div class="gutter">
+          <span id="infoBlurb" class="list-header list-header--material">Presiona para organizar las canciones.</span>
+          <ons-list id="list-list" class="glassy"></ons-list>
+        </div>
+          <div class="default_img_container">
+            <img src="img/list_default.png" />
+          </div>
+      </div>
+    </ons-page>
+  </template>
+
+  <!-- Song view template -->
+  <template id="tmpl-songview">
+    <ons-page class="page" id="songView_page" data-init-fn="songView_page_init" data-css="css/songView_page.css">
+      <ons-toolbar modifier="cover-content transparent">
+        <div class="left">
+          <button class="back-btn" onclick="document.getElementById('navigator').popPage()">
+            <svg class="back-icon" viewBox="0 0 24 24" width="24" height="24" fill="var(--highlight-color)" aria-hidden="true" focusable="false">
+              <path d="M16.7 23.5 5.2 12 16.7.5l2 2L9.3 12l9.5 9.5z"/>
+            </svg>
+            <span>Volver</span>
+          </button>
+        </div>
+        <div class="center" id="songTitle"></div>
+        <div class="right">
+
+          <button id="lb-font-decrease"
+                  class="lb-icon-btn lb-font-btn lb-font-decrease"
+                  title="Decrease text size"
+                  aria-label="Decrease text size">
+            <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M1 19 6.3 5h2.5L14 19h-2.4l-1.3-3.6H4.7L3.4 19zm4.4-5.6h4.2l-2-5.8h-.2zM15 13v-2h8v2z"/>
+            </svg>
+          </button>
+          <button id="lb-font-increase"
+                  class="lb-icon-btn lb-font-btn lb-font-increase"
+                  title="Increase text size"
+                  aria-label="Increase text size">
+            <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M1 19 6.3 5h2.5L14 19h-2.4l-1.3-3.6H4.7L3.4 19zm4.4-5.6h4.2l-2-5.8h-.1zM18 16v-3h-3v-2h3V8h2v3h3v2h-3v3z"/>
+            </svg>
+          </button>
+
+          <ons-toolbar-button id="songViewMenuBtn" ripple="false">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--highlight-color)">
+              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+            </svg>
+            <ons-icon icon="md-more-vert"></ons-icon>
+          </ons-toolbar-button>
+
+        </div>
+      </ons-toolbar>
+
+      <div class="page__content">
+        <span id="transAvail" class="list-header list-header--material"></span>
+        <div class="list-header--material" style="text-align:center; opacity:.6; font-size:12px;">
+          PRESIONA DOS VECES PARA LEER LA TRADUCCIÓN.
+        </div>
+        <ons-list id="verseList"></ons-list>
+        <div id="footerSpacer" style="height: 33vh;">
+          <div style="height: 100%"></div>
+        </div>
+      </div>
+
+      <!-- toTop FAB — restored from the commented template -->
+      <ons-fab id="toTop"
+               style="opacity: 0; pointer-events: none; transition: all 0.3s;"
+               position="bottom right"
+               class="glassyFloat"
+               onclick='document.querySelector("#songView_page .page__content").scrollTo({top:0,behavior:"smooth"})'>
+        <svg class="to-top-icon"
+             viewBox="0 0 24 24"
+             height="24px"
+             width="24px"
+             fill="var(--highlight-color)"
+             aria-hidden="true"
+             focusable="false">
+          <path d="M11 16h2v-4.2l1.6 1.6L16 12l-4-4-4 4 1.4 1.4 1.6-1.6zm1 6c-1.4 0-2.7-.3-3.9-.8S5.8 20 4.9 19.1s-1.6-2-2.1-3.2S2 13.4 2 12s.3-2.7.8-3.9S4 5.8 4.9 4.9s2-1.6 3.2-2.1S10.6 2 12 2s2.7.3 3.9.8 2.3 1.2 3.2 2.1 1.6 2 2.1 3.2.8 2.5.8 3.9-.3 2.7-.8 3.9-1.2 2.3-2.1 3.2-2 1.6-3.2 2.1-2.5.8-3.9.8m0-2c2.2 0 4.1-.8 5.7-2.3 1.5-1.5 2.3-3.4 2.3-5.7s-.8-4.1-2.3-5.7C16.1 4.8 14.2 4 12 4s-4.1.8-5.7 2.3S4 9.8 4 12s.8 4.1 2.3 5.7C7.9 19.2 9.8 20 12 20"/>
+        </svg>
+      </ons-fab>
+
+      <!-- Popover — correctly placed as a direct child of <ons-page>, NOT inside the FAB -->
+      <ons-popover id="songViewPopover" cancelable>
+        <ons-list>
+          <ons-list-item id="listBtn" tappable modifier="nodivider">
+            <div class="left">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--highlight-color)">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z"/>
+              </svg>
+            </div>
+            <div class="center">Agregar a mi lista</div>
+          </ons-list-item>
+          <ons-list-item id="announceBtn" tappable modifier="nodivider" style="display: none;">
+            <div class="left">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--highlight-color)">
+                <path d="M4 4v16h16V4H4zm14 14H6V6h12v12zM8 8h2v2H8V8zm4 0h2v2h-2V8zm-4 4h2v2H8v-2zm4 0h2v2h-2v-2z"/>
+              </svg>
+            </div>
+            <div class="center">Anunciar</div>
+          </ons-list-item>
+          <ons-list-item id="shareBtn" tappable modifier="nodivider">
+            <div class="left">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--highlight-color)">
+                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+              </svg>
+            </div>
+            <div class="center">Compartir canción</div>
+          </ons-list-item>
+        </ons-list>
+      </ons-popover>
+    </ons-page>
+  </template>
+
+  <!-- App scripts -->
+  <script src="js/dependencies/Sortable.min.js"></script>
+  <script src="js/dependencies/fuse.min.js"></script>
+
+  <script src="js/router.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/app.js"></script>
+
+  <script src="js/home_page.js"></script>
+  <script src="js/lists_page.js"></script>
+  <script src="js/list_page.js"></script>
+  <script src="js/all_songs_page.js"></script>
+  <script src="js/search_page.js"></script>
+  <script src="js/settings_page.js"></script>
+  <script src="js/pronounce_page.js"></script>
+  <script src="js/author_page.js"></script>
+  <script src="js/songView_page.js"></script>
+</body>
+</html>

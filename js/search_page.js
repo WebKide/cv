@@ -1,0 +1,336 @@
+/**
+ * js/search_page.js
+ * Search shell — real flow (open standalone, or "add to list" mode when
+ * pushed with { listName }), backed by a real Fuse.js index built over
+ * window.INDEX.
+ *
+ * window.INDEX[i] is now an object (from SO/IDX_db.json's "IDX" array):
+ *   { first_line, search, author, language, verses, en_translation,
+ *     translation_intro, unsorted, file_name }
+ *   - "search" is the full lyric blob, lowercase/diacritic-stripped, with
+ *     spaces between words (unlike the old space-stripped searchBlob).
+ *   - "first_line" keeps its original diacritics (it's the display title),
+ *     so a normalized shadow copy is built once below for matching/boost.
+ *
+ * Fuse is built over a small shadow array {searchIdx, search, title_norm}
+ * rather than window.INDEX directly, since window.INDEX no longer carries
+ * a precomputed title_norm field. Array order/length match window.INDEX
+ * 1:1, so result.refIndex still maps straight to the real song id.
+ */
+ 
+// --- Fuse wiring --------------------------------------------------
+let fuse = null;
+let titleNormCache = null; // parallel array: normalized first_line per song
+ 
+const FUSE_OPTIONS = {
+  includeScore: true,
+  ignoreLocation: true, /* "search" is one long concatenated blob per song, not a bag of separately-located words — location-constrained matching would miss hits deep in the blob. */
+  distance: 3600, // generous, for the same reason as above.
+  threshold: 0.3,
+  minMatchCharLength: 3,
+  keys: [
+    { name: 'search', weight: 0.6 },
+    { name: 'title_norm', weight: 0.4 }
+  ]
+};
+ 
+function initFuseIndex(idx) {
+  if (typeof Fuse === 'undefined') {
+    console.error('[search_page] Fuse no está cargado. Vuelve a cargar la aplicación.');
+    return;
+  }
+  if (!idx || typeof idx !== 'object') {
+    console.error('[search_page] Faltan datos del índice o son inválidos:', idx);
+    return;
+  }
+ 
+  const keys = Object.keys(idx);
+  if (keys.length === 0) {
+    console.error('[search_page] El índice está vacío; no se puede inicializar la búsqueda.');
+    return;
+  }
+ 
+  // titleNormCache is now keyed by file_name instead of numeric index
+  titleNormCache = {};
+  keys.forEach((fileName) => {
+    titleNormCache[fileName] = normalizeQuery(idx[fileName].first_line);
+  });
+ 
+  const fuseData = keys.map((fileName) => ({
+    id: fileName,
+    search: idx[fileName].search || '',
+    title_norm: titleNormCache[fileName]
+  }));
+ 
+  fuse = new Fuse(fuseData, FUSE_OPTIONS);
+  // console.log('[search_page] Fuse index ready with', fuseData.length, 'songs');
+}
+ 
+// Defensive initialization: window.indexPromise may resolve before or after this module loads
+if (window.indexPromise && typeof window.indexPromise.then === 'function') {
+  window.indexPromise
+    .then((resolvedIdx) => initFuseIndex(resolvedIdx || window.INDEX))
+    .catch((err) => console.error('[search_page] No se pudo inicializar el índice de búsqueda:', err));
+} else {
+  // If app.js hasn't created the promise yet, poll briefly
+  let attempts = 0;
+  const poll = setInterval(() => {
+    attempts++;
+    if (window.indexPromise && typeof window.indexPromise.then === 'function') {
+      clearInterval(poll);
+      window.indexPromise
+        .then((resolvedIdx) => initFuseIndex(resolvedIdx || window.INDEX))
+        .catch((err) => console.error('[search_page] No se pudo inicializar el índice de búsqueda:', err));
+    } else if (attempts > 20) {
+      clearInterval(poll);
+      console.error('[search_page] window.indexPromise nunca estuvo disponible');
+    }
+  }, 100);
+}
+ 
+// ----------------------------------------------------------------------
+
+let last_query = '';
+
+function search_page_init(page) {
+  last_query = ''; // reset per page instance, not just per app lifetime
+  let clickHandler;
+  const listName = page.data && page.data.listName;
+ 
+  if (listName) {
+    // PICKER MODE: Adding a song to a specific list
+    clickHandler = (song) => {
+      const songId = song.id;
+      addSongToList(songId, listName);
+      document.getElementById('navigator').popPage();
+    };
+    const hint = page.querySelector('#search-hint-add');
+    if (hint) hint.style.display = '';
+  } else {
+    // BROWSE MODE: Opening the song to view it
+    clickHandler = (song) => {
+      const songId = song.id;
+      showSongViewUI(songId, null, 'replace');
+    };
+  }
+ 
+  const MIN_QUERY_LENGTH = 3;
+  const SEARCH_DEBOUNCE_MS = 150;
+  let debounceTimer = null;
+ 
+  // Robust selector: try the new structure first, fall back to legacy
+  const searchInput = page.querySelector('.search-bar input') || page.querySelector('.search-box') || page.querySelector('input[type="text"]');
+  const searchBar = page.querySelector('.search-bar');
+  const clearBtn = page.querySelector('.search-clear');
+ 
+  if (!searchInput) {
+    console.error('[search_page] No se pudo encontrar el elemento de entrada de búsqueda');
+    return;
+  }
+ 
+  function doSearch(query) {
+    // console.log('[search_page] doSearch called with:', JSON.stringify(query), 'fuse ready?', !!fuse, 'index size:', Object.keys(window.INDEX || {}).length);
+    if (!fuse) {
+      // If fuse isn't ready yet, wait and retry once
+      setTimeout(() => {
+        if (fuse) render_searchUI(page, query, clickHandler, 'search-list-page', MIN_QUERY_LENGTH);
+        else {
+          console.warn('[search_page] El Fuse aún no está listo');
+          const listElement = page.querySelector('#search-list-page');
+          if (listElement) listElement.innerHTML = "<span style='padding:20px; display:block;'>Loading search index…</span>";
+        }
+      }, 500);
+      return;
+    }
+    render_searchUI(page, query, clickHandler, 'search-list-page', MIN_QUERY_LENGTH);
+  }
+ 
+  // Use 'input' event (fires on any change: typing, paste, clear) instead of just keyup
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value;
+    if (searchBar) searchBar.classList.toggle('has-value', query.length > 0);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => doSearch(query), SEARCH_DEBOUNCE_MS);
+  });
+ 
+  if (clearBtn) {
+    clearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      searchInput.value = '';
+      if (searchBar) searchBar.classList.remove('has-value');
+      searchInput.focus();
+      doSearch('');
+    });
+  }
+ 
+  setTimeout(() => searchInput.focus(), 150);
+ 
+  const defaultImg = page.querySelector('.default_img_container');
+  if (defaultImg) fitElementToPage(defaultImg);
+ 
+  /* scroll-to-top FAB */
+  const scrollArea = page.querySelector(".page__content");
+  const fab = page.querySelector("#toTop");
+  if (scrollArea && fab) {
+    scrollArea.addEventListener('scroll', () => {
+      if (scrollArea.scrollTop > 300) {
+        fab.style.opacity = "1";
+        fab.style.pointerEvents = "auto";
+        fab.style.visibility = "visible";
+      } else {
+        fab.style.opacity = "0";
+        fab.style.pointerEvents = "none";
+      }
+    });
+  }
+}
+ 
+/**
+ * Normalizes a raw query the same way title_norm/searchBlob were built:
+ * lowercase, strip diacritics (NFD decompose + drop combining marks),
+ * then drop everything that isn't a-z0-9 (spaces included, since the
+ * indexed blob has no spaces either).
+ */
+function normalizeQuery(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip combining diacritics
+    .replace(/[^a-z0-9\s]/g, '') // strip punctuation, keep spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+ 
+function truncateWords(str, maxWords) {
+  const words = String(str || '').trim().split(/\s+/);
+  if (words.length <= maxWords) return str;
+  return words.slice(0, maxWords).join(' ') + ' ॥';
+}
+ 
+/**
+ * dp.json's index-array position isn't fixed/known ahead of time (IDX.json
+ * is regenerated from the SO/ directory), so we look it up by filename
+ * once and cache it, rather than hardcoding a numeric id.
+ */
+let _fallbackSongId = null;
+function getFallbackSongId() {
+  if (_fallbackSongId !== null) return _fallbackSongId;
+  if (!window.INDEX) return null;
+ 
+  // window.INDEX is now keyed by file_name — direct lookup instead of a scan
+  _fallbackSongId = window.INDEX['dp.json'] ? 'dp.json' : -1;
+  return _fallbackSongId;
+}
+ 
+/**
+ * Searches window.INDEX via Fuse over searchBlob (+ title_norm boost).
+ * Returns [{ id, title }], capped to 30, ranked by Fuse score.
+ * If too few results come back, the threshold is temporarily widened
+ * (typo-tolerance fallback) then restored.
+ */
+function search(query) {
+  if (!fuse) {
+    // console.warn('[search_page] search() called but fuse is not initialized yet');
+    return [];
+  }
+ 
+  const q = normalizeQuery(query);
+  if (!q) {
+    // console.log('[search_page] normalizeQuery returned empty for:', JSON.stringify(query));
+    return [];
+  }
+ 
+  /* Tier 1: exact prefix match */
+  const prefixIds = [];
+  const prefixSeen = new Set();
+  Object.keys(window.INDEX).forEach((fileName) => {
+    const titleNorm = (titleNormCache && titleNormCache[fileName]) || '';
+    if (titleNorm.startsWith(q)) {
+      prefixIds.push(fileName);
+      prefixSeen.add(fileName);
+    }
+  });
+ 
+  /* Tier 2: fuzzy fallback (typo tolerance, mid-lyric matches, etc */
+  let results = fuse.search(q);
+
+  if (results.length < 2) {
+    const originalThreshold = fuse.options.threshold;
+    fuse.options.threshold = originalThreshold + 0.2;
+    results = fuse.search(q);
+    fuse.options.threshold = originalThreshold;
+  }
+
+  // Exact prefix matches first, then fuzzy results (skipping anything
+  // already surfaced via prefix match), capped at 30 total.
+  const fuzzyIds = results
+    .map((result) => result.item.id)
+    .filter((fileName) => !prefixSeen.has(fileName));
+
+  const orderedIds = prefixIds.concat(fuzzyIds).slice(0, 30);
+
+  return orderedIds.map((fileName) => {
+    const rec = window.INDEX[fileName];
+    return {
+      id: fileName,
+      title: window.getSongTitle(fileName),
+      author: (rec && rec.author) || ''
+    };
+  });
+}
+
+ 
+function gen_searchResultItem(item, onClick) {
+  const el = document.createElement('ons-list-item');
+  el.setAttribute('tappable', '');
+  el.innerHTML = `
+    <div class="center search-result">
+      ${item.author ? `<div class="search-result-author">${escapeHtml(item.author)}</div>` : ''}
+      <div class="search-result-title">${escapeHtml(truncateWords(item.title, 7))}</div>
+    </div>
+  `;
+  el.onclick = onClick;
+  return el;
+}
+ 
+function renderSearchResults(listElement, results, clickHandler) {
+  listElement.innerHTML = '';
+  results.forEach((item) => {
+    listElement.appendChild(gen_searchResultItem(item, () => clickHandler(item)));
+  });
+}
+ 
+function render_searchUI(page, query, clickHandler, listId, minLength) {
+  minLength = minLength || 1;
+  if (query === last_query) return;
+  last_query = query;
+ 
+  const listElement = page.querySelector('#' + listId);
+  if (!listElement) return;
+ 
+  // Below the character threshold: keep the default placeholder up rather
+  // than running Fuse or showing a "no match" fallback prematurely.
+  if (query.trim().length < minLength) {
+    listElement.innerHTML = `<div class="default_img_container"><img src="img/search_default.png"></div>`;
+    return;
+  }
+ 
+  const results = search(query);
+ 
+  if (results && results.length > 0) {
+    renderSearchResults(listElement, results, clickHandler);
+  } else {
+    listElement.innerHTML =
+      "<span style='padding:20px; display:block; background-color: var(--gray-darker); color: var(--highlight);'>Found this match for your query:</span>";
+ 
+    const fallbackId = getFallbackSongId();
+    if (fallbackId !== -1) {
+      const fallbackRec = window.INDEX[fallbackId];
+      renderSearchResults(
+        listElement,
+        [{ id: fallbackId, title: window.getSongTitle(fallbackId), author: (fallbackRec && fallbackRec.author) || '' }],
+        clickHandler
+      );
+    }
+  }
+}

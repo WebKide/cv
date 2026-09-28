@@ -1,0 +1,208 @@
+/**
+ * js/app.js
+ * Global app state, persistence, song index loading, theme, and boot sequence.
+ */
+ 
+// ---------------------------------------------------------------------
+// Global state
+// ---------------------------------------------------------------------
+ 
+window.songCache = {}; // in-memory cache
+ 
+window.getSongById = async function(id) {
+  return (window.INDEX && window.INDEX[id]) || null;
+};
+ 
+// ---------------------------------------------------------------------
+// localStorage-backed key/value store
+// ---------------------------------------------------------------------
+ 
+const DB_PREFIX = 'kirtan:';
+ 
+async function dbGetItem(key) {
+  try {
+    const raw = localStorage.getItem(DB_PREFIX + key);
+    return raw === null ? null : JSON.parse(raw);
+  } catch (e) {
+    console.error('dbGetItem failed for', key, e);
+    return null;
+  }
+}
+ 
+async function dbSetItem(key, value) {
+  try {
+    localStorage.setItem(DB_PREFIX + key, JSON.stringify(value));
+    return true;
+  } catch (e) {
+    console.error('dbSetItem failed for', key, e);
+    return false;
+  }
+}
+ 
+// Clear all recent items
+window.clearRecents = async function() {
+  const confirmed = await ons.notification.confirm({
+    message: '¿Deseas borrar tu historial reciente?',
+    title: 'Borrar Canciones Recientes',
+    buttonLabels: ['Cancelar', 'Eliminar'],
+    primaryButtonIndex: 1
+  });
+ 
+  if (confirmed === 1) { // 1 corresponds to 'Clear' (index 1 in buttonLabels)
+    appState.recents = [];
+    await dbSetItem('recents', []);
+ 
+    // Refresh the UI
+    if (typeof renderRecents === 'function') {
+      renderRecents();
+    }
+ 
+    ons.notification.toast('Historial vaciado', { timeout: 2000 });
+  }
+};
+ 
+// Create a new list and clear recents
+window.createListFromRecents = async function() {
+  if (appState.recents.length === 0) {
+    ons.notification.alert("No hay canciones recientes para crear una lista.");
+    return;
+  }
+ 
+  const listName = await ons.notification.prompt({
+    title: 'Nueva Lista',
+    message: 'Nombra tu nueva lista:',
+    defaultValue: 'Canciones favoritas',
+    buttonLabels: ['Cancelar', 'Crear'], // Add this line
+    primaryButtonIndex: 1,  // Makes 'Create' the bold/primary choice
+    cancelable: true        // Allows closing by tapping outside
+  });
+ 
+  // Important: When there are two buttons, listName will be null if 'Cancel' is pressed
+  if (listName === null || listName === undefined) {
+    return; // User cancelled
+  }
+ 
+  if (listName) {
+    // Save to lists
+    appState.lists[listName] = appState.recents.map(item => item.id);
+    await dbSetItem('lists', appState.lists);
+ 
+    // Clear history
+    appState.recents = [];
+    await dbSetItem('recents', []);
+ 
+    ons.notification.toast(`Lista “${listName}” creada!`, { timeout: 2000 });
+    if (typeof renderRecents === 'function') renderRecents();
+  }
+};
+ 
+window.appState = {
+  lists: {},
+  recents: [],
+  langCode: 'EN',
+  themeMode: 'system',
+  zoomSize: 22,
+  fontFamily: "'Charis SIL', serif",
+  trans: false,
+  deviceInfo: null
+};
+ 
+async function loadPersistedState() {
+  const [lists, recents, langCode, themeMode, zoomSize, trans, fontFamily] = await Promise.all([
+    dbGetItem('lists'),
+    dbGetItem('recents'),
+    dbGetItem('langCode'),
+    dbGetItem('themeMode'),
+    dbGetItem('zoomSize'),
+    dbGetItem('trans'),
+    dbGetItem('fontFamily')
+  ]);
+ 
+  if (lists) appState.lists = lists;
+  if (recents) appState.recents = recents;
+  if (langCode) appState.langCode = langCode;
+  if (themeMode) appState.themeMode = themeMode;  // if (themeMode !== null && themeMode !== undefined) appState.themeMode = themeMode;
+  if (zoomSize) appState.zoomSize = zoomSize;
+  if (trans !== null && trans !== undefined) appState.trans = trans;
+  if (fontFamily) appState.fontFamily = fontFamily;
+}
+ 
+// ---------------------------------------------------------------------
+// Song index
+// window.INDEX[i] = [title, slug, searchBlob, firstLineRomanized, filename]
+// ---------------------------------------------------------------------
+/*
+window.IDX_TITLE       = 0;  // "he govinda he gopāla"
+window.IDX_TITLE_NORM  = 1;  // "hegovindahegopala"
+window.IDX_SEARCHBLOB  = 2;  // "hegovindahegopalakesavamadhava...."
+window.IDX_FIRSTLINE   = 3;  // "he govinda he gopāla"
+window.IDX_FILE        = 4;  // "5G.json"*/
+ 
+window.indexPromise = fetch('SO/IDX_db.json')
+  .then((r) => r.json())
+  .then((data) => {
+    const list = data.IDX || [];
+    // Convert array to a Map/Object for easy lookup by file_name
+    window.INDEX = {};
+    list.forEach(item => {
+      if (item.file_name) {
+        window.INDEX[item.file_name] = item;
+      }
+    });
+    return window.INDEX;
+  })
+  .catch((err) => {
+    console.error('No se pudo cargar el índice de canciones (SO/IDX_db.json):', err);
+    window.INDEX = {};
+    return {};
+  });
+ 
+window.getSongTitle = function (id) {
+  const rec = window.INDEX && window.INDEX[id];
+  // Access the named property 'first_line' from the object
+  return rec ? (rec.first_line || '') : '';
+};
+
+// ---------------------------------------------------------------------
+// Theme
+// ---------------------------------------------------------------------
+ 
+function apply_theme() {
+  const mode = appState.themeMode; // 'dark' | 'light' | 'system'
+  let effective = mode === 'system' ? null : mode;
+  if (!effective) {
+    effective = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  document.documentElement.classList.remove('theme-light', 'theme-dark');
+  document.documentElement.classList.add('theme-' + effective);
+ 
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', effective === 'light' ? '#ffffff' : '#0d0d0d');
+}
+ 
+if (window.matchMedia) {
+  const mq = window.matchMedia('(prefers-color-scheme: light)');
+  const onChange = () => { if (appState.themeMode === 'system') apply_theme(); };
+  if (mq.addEventListener) mq.addEventListener('change', onChange);
+  else if (mq.addListener) mq.addListener(onChange); // older Safari
+}
+ 
+// ---------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------
+ 
+async function boot() {
+  await loadPersistedState();
+  apply_theme();
+  apply_font();
+  await window.indexPromise;
+  document.getElementById('navigator').resetToPage('tmpl-shell');
+}
+ 
+document.addEventListener('DOMContentLoaded', boot);
+
+document.addEventListener('contextmenu', (e) => {
+  if (e.target instanceof Element && e.target.closest('img')) {
+    e.preventDefault();
+  }
+});

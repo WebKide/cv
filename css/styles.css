@@ -1,0 +1,2489 @@
+/**
+ * styles.css
+ * Kīrtan App — editorial reading redesign
+ *
+ * A calm, content-first, native-app-like reading experience inspired by
+ * premium read-later apps. Works alongside the existing offline Onsen UI
+ * bundle and ios-safe-area-fix-v2.css (both still linked from index.html
+ * and cannot be removed), so this file both restyles the app AND keeps
+ * every selector that Onsen's JS runtime, router.js and the page scripts
+ * depend on for layout/behaviour (page stack, tabbar click-through,
+ * lazy-repeat, sortable, swipe-to-delete, marquees, slideshow, popovers,
+ * switches, expandable verses, safe areas).
+ *
+ * Organisation:
+ *   1. Reset / normalisation
+ *   2. Design tokens (dark "Śyāma" default, light "Aruṇa" override)
+ *   3. Base typography
+ *   4. Application shell (page stack, safe areas, scroll containers)
+ *   5. Navigation (toolbar, back button, bottom dock/tabbar, search bar)
+ *   6. Surfaces & lists (glassy → flat tonal surfaces, list rows)
+ *   7. Home page (recents, quick shortcuts, logo)
+ *   8. Lists tab (custom lists, tattva/ārati groups, gallery/slideshow)
+ *   9. Search page
+ *  10. Authors / Pronunciation guide
+ *  11. List detail (drag/sort/swipe)
+ *  12. Song view (the primary reading surface)
+ *  13. Settings page
+ *  14. Controls (buttons, fab, switches, popovers, dialogs)
+ *  15. Utilities / state
+ *  16. Responsive enhancements (tablet / desktop reading column)
+ *  17. Accessibility / reduced motion / focus
+ */
+
+/* ============================================================
+   1. RESET / NORMALISATION
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+  background: var(--kirtan-page-surround, #0d0d0d);
+}
+
+img { max-width: 100%; }
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* ============================================================
+   2. DESIGN TOKENS
+   ============================================================ */
+
+:root {
+  /* ---- Typography ---- */
+  --font-family: 'Charis SIL', serif;             /* reading serif */
+  --material-font-family: 'Nunito Sans', sans-serif; /* UI sans */
+  font-family: var(--material-font-family);
+
+  /* ---- Dark theme ("Śyāma") — deep blue-charcoal, never pure black ---- */
+  --background-color: #14171c;
+  --text-color: #ece6da;
+  --sub-text-color: #a7a196;
+  --highlight: rgba(240, 180, 60, 1);
+  --highlight-color: #f0b43c;
+  --second-highlight-color: #5fcdd6;
+  --border-color: rgba(255, 255, 255, 0.09);
+  --active-overlay: rgba(255, 255, 255, 0.07);
+  --gray-lighter: #8a8a86;
+  --gray-light: #74746f;
+  --gray-dark: #55554f;
+  --gray-darker: #3c3c37;
+
+  --outer-shadow: -20px 0 24px -20px var(--kirtan-page-surround);
+  --thumbnail-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+
+  /* flat tonal surface — replaces glassmorphism */
+  --surface-color: rgba(255, 255, 255, 0.035);
+  --surface-color-strong: rgba(255, 255, 255, 0.06);
+  --surface-border: rgba(255, 255, 255, 0.09);
+  --surface-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
+                    0 6px 16px rgba(0, 0, 0, 0.28);
+
+  --glass-gradient: var(--surface-color);
+  --glass-border: 1px solid var(--surface-border);
+  --glass-inset-shadow: var(--surface-shadow);
+  --separator-gradient: rgba(255, 255, 255, 0.14);
+  --sortable-chosen-bg: rgba(255, 255, 255, 0.06);
+  --sortable-ghost-bg: rgba(255, 255, 255, 0.1);
+
+  /* ---- App-specific layout ---- */
+  --kirtan-accent: #f0b43c;
+  --kirtan-bg: #14171c;
+  --kirtan-tabbar-bg: #191d23;
+  --kirtan-page-surround: #0b0d10;
+
+  /* on / active indicator, independent of theme accent */
+  --on-color: #3ea66f;
+  --on-color-soft: rgba(62, 166, 111, 0.32);
+
+  /* darker scrim behind modals/popovers so the lightbox surface stands out */
+  --modal-scrim-color: rgba(0, 0, 0, 0.6);
+
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+
+  /* ---- Safe-area insets ---- */
+  --inset-top: env(safe-area-inset-top, 0px);
+  --inset-bottom: env(safe-area-inset-bottom, 0px);
+  --inset-left: env(safe-area-inset-left, 0px);
+  --inset-right: env(safe-area-inset-right, 0px);
+
+  /* ---- Onsen UI component variable overrides ---- */
+  --button-background-color: transparent;
+  --button-cta-background-color: transparent;
+  --toolbar-background-color: transparent;
+  --toolbar-button-color: var(--highlight-color);
+  --toolbar-text-color: var(--text-color);
+  --toolbar-border-color: var(--border-color);
+  --button-bar-color: var(--highlight-color);
+  --button-bar-active-text-color: var(--text-color);
+  --button-bar-active-background-color: transparent;
+  --button-light-color: var(--text-color);
+  --segment-color: var(--highlight-color);
+  --segment-active-text-color: var(--text-color);
+  --segment-active-background-color: transparent;
+  --list-background-color: transparent;
+  --list-header-background-color: transparent;
+  --list-tap-active-background-color: var(--active-overlay);
+  --list-item-chevron-color: var(--sub-text-color);
+  --progress-bar-color: var(--highlight-color);
+  --progress-bar-secondary-color: var(--second-highlight-color);
+  --progress-bar-background-color: transparent;
+  --progress-circle-primary-color: var(--highlight-color);
+  --progress-circle-secondary-color: var(--second-highlight-color);
+  --progress-circle-background-color: transparent;
+  --tabbar-background-color: transparent;
+  --tabbar-text-color: var(--gray-lighter);
+  --tabbar-highlight-text-color: var(--highlight-color);
+  --tabbar-border-color: var(--border-color);
+  --switch-highlight-color: var(--on-color);
+  --switch-border-color: rgba(255, 255, 255, 0.18);
+  --switch-background-color: #33383f;
+  --range-track-background-color: var(--gray-dark);
+  --range-track-background-color-active: var(--highlight-color);
+  --range-thumb-background-color: var(--highlight-color);
+  --modal-background-color: rgba(10, 11, 13, 0.6);
+  --modal-text-color: var(--text-color);
+  --alert-dialog-background-color: var(--kirtan-bg);
+  --alert-dialog-text-color: var(--text-color);
+  --alert-dialog-button-color: var(--highlight-color);
+  --alert-dialog-separator-color: var(--border-color);
+  --dialog-background-color: var(--kirtan-bg);
+  --dialog-text-color: var(--text-color);
+  --popover-background-color: var(--kirtan-tabbar-bg);
+  --popover-text-color: var(--text-color);
+  --action-sheet-title-color: var(--sub-text-color);
+  --action-sheet-button-separator-color: var(--border-color);
+  --action-sheet-button-color: var(--highlight-color);
+  --action-sheet-button-destructive-color: #e5654f;
+  --action-sheet-button-background-color: var(--kirtan-bg);
+  --action-sheet-button-active-background-color: var(--active-overlay);
+  --action-sheet-cancel-button-background-color: var(--kirtan-bg);
+  --notification-background-color: var(--second-highlight-color);
+  --notification-color: #0b1013;
+  --search-input-background-color: transparent;
+  --fab-text-color: #16130a;
+  --fab-background-color: var(--highlight-color);
+  --fab-active-background-color: transparent;
+  --card-background-color: transparent;
+  --card-text-color: var(--text-color);
+  --toast-background-color: var(--kirtan-tabbar-bg);
+  --toast-text-color: var(--text-color);
+  --toast-button-text-color: var(--highlight-color);
+  --select-input-color: var(--text-color);
+  --select-input-border-color: var(--border-color);
+  --material-background-color: var(--background-color);
+  --material-text-color: var(--text-color);
+  --material-notification-background-color: var(--second-highlight-color);
+  --material-notification-color: #0b1013;
+  --material-switch-active-thumb-color: var(--on-color);
+  --material-switch-active-background-color: var(--on-color-soft);
+  --material-switch-inactive-thumb-color: #9a9a95;
+  --material-switch-inactive-background-color: rgba(255, 255, 255, 0.14);
+  --material-range-track-color: var(--range-track-background-color);
+  --material-range-thumb-color: var(--highlight-color);
+  --material-range-disabled-thumb-color: var(--gray-darker);
+  --material-range-disabled-thumb-border-color: var(--material-range-disabled-thumb-color);
+  --material-range-zero-thumb-color: var(--background-color);
+  --material-toolbar-background-color: transparent;
+  --material-toolbar-text-color: var(--text-color);
+  --material-toolbar-button-color: var(--highlight-color);
+  --material-segment-background-color: transparent;
+  --material-segment-active-background-color: transparent;
+  --material-segment-text-color: var(--sub-text-color);
+  --material-segment-active-text-color: var(--text-color);
+  --material-button-background-color: var(--highlight-color);
+  --material-button-text-color: #16130a;
+  --material-button-disabled-background-color: transparent;
+  --material-button-disabled-color: var(--material-range-disabled-thumb-color);
+  --material-flat-button-active-background-color: var(--active-overlay);
+  --material-list-background-color: transparent;
+  --material-list-item-separator-color: var(--border-color);
+  --material-list-header-text-color: var(--sub-text-color);
+  --material-checkbox-active-color: var(--highlight-color);
+  --material-checkbox-inactive-color: var(--material-switch-inactive-thumb-color);
+  --material-checkbox-checkmark-color: var(--background-color);
+  --material-radio-button-active-color: var(--highlight-color);
+  --material-radio-button-inactive-color: var(--material-switch-inactive-thumb-color);
+  --material-radio-button-disabled-color: var(--material-range-disabled-thumb-color);
+  --material-text-input-text-color: var(--text-color);
+  --material-text-input-active-color: var(--highlight-color);
+  --material-text-input-inactive-color: var(--gray-lighter);
+  --material-search-background-color: transparent;
+  --material-dialog-background-color: var(--kirtan-bg);
+  --material-dialog-text-color: var(--material-text-color);
+  --material-alert-dialog-background-color: var(--kirtan-bg);
+  --material-alert-dialog-title-color: var(--text-color);
+  --material-alert-dialog-content-color: var(--sub-text-color);
+  --material-alert-dialog-button-color: var(--highlight-color);
+  --material-progress-bar-primary-color: var(--highlight-color);
+  --material-progress-bar-secondary-color: var(--second-highlight-color);
+  --material-progress-bar-background-color: transparent;
+  --material-progress-circle-primary-color: var(--highlight-color);
+  --material-progress-circle-secondary-color: var(--second-highlight-color);
+  --material-progress-circle-background-color: transparent;
+  --material-tabbar-background-color: transparent;
+  --material-tabbar-text-color: var(--tabbar-text-color);
+  --material-tabbar-highlight-text-color: var(--highlight-color);
+  --material-tabbar-highlight-color: transparent;
+  --material-fab-text-color: #16130a;
+  --material-fab-background-color: var(--highlight-color);
+  --material-fab-active-background-color: transparent;
+  --material-card-background-color: transparent;
+  --material-card-text-color: var(--text-color);
+  --material-toast-background-color: var(--kirtan-tabbar-bg);
+  --material-toast-text-color: var(--text-color);
+  --material-toast-button-text-color: var(--highlight-color);
+  --material-select-input-color: var(--text-color);
+  --material-select-input-active-color: var(--highlight-color);
+  --material-select-input-inactive-color: var(--gray-lighter);
+  --material-select-border-color: var(--border-color);
+  --material-popover-background-color: var(--kirtan-tabbar-bg);
+  --material-popover-text-color: var(--text-color);
+  --material-action-sheet-text-color: var(--text-color);
+  --tap-highlight-color: transparent;
+}
+
+/* ---- Light theme override ("Aruṇa") — warm peach paper + cyan accent ---- */
+:root.theme-light {
+  --background-color: #f8cebf;
+  --text-color: #2a231f;
+  --sub-text-color: #6b5d53;
+  --highlight-color: #007a94;
+  --second-highlight-color: #c96a1f;
+  --border-color: rgba(42, 35, 31, 0.14);
+  --active-overlay: rgba(42, 35, 31, 0.06);
+  --gray-lighter: #8c7d71;
+  --gray-light: #766659;
+  --gray-dark: #4c4038;
+  --gray-darker: #332a24;
+
+  --outer-shadow: 0 10px 24px rgba(90, 58, 34, 0.14);
+  --thumbnail-shadow: 0 4px 14px rgba(90, 58, 34, 0.22);
+
+  --surface-color: #fbe2da;
+  --surface-color-strong: #fbe2da;
+  --surface-border: rgba(42, 35, 31, 0.1);
+  --surface-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset,
+                    0 6px 16px rgba(90, 58, 34, 0.08);
+
+  --glass-gradient: var(--surface-color);
+  --glass-border: 1px solid var(--surface-border);
+  --glass-inset-shadow: var(--surface-shadow);
+  --separator-gradient: rgba(42, 35, 31, 0.14);
+  --sortable-chosen-bg: rgba(42, 35, 31, 0.05);
+  --sortable-ghost-bg: rgba(42, 35, 31, 0.09);
+
+  --kirtan-bg: #f9cfc1; /* lighter color for the glassy elements #fbe2da*/
+  --kirtan-tabbar-bg: #fbe0d6;
+  --kirtan-page-surround: #e7c397;
+
+  --modal-scrim-color: rgba(20, 12, 4, 0.45);
+
+  --switch-background-color: #d9c9b8;
+  --material-switch-inactive-thumb-color: #f2ece4;
+  --material-switch-inactive-background-color: rgba(42, 35, 31, 0.16);
+  --fab-text-color: #fff8f0;
+  --material-fab-text-color: #fff8f0;
+  --material-button-text-color: #fff8f0;
+  --notification-color: #fff8f0;
+  --material-notification-color: #fff8f0;
+
+  color-scheme: light;
+}
+
+:root.theme-dark {
+  color-scheme: dark;
+}
+
+/* ============================================================
+   3. BASE TYPOGRAPHY
+   ============================================================ */
+
+body {
+  font-family: var(--material-font-family);
+  color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--material-font-family);
+  font-weight: 700;
+  margin: 0.6em 0;
+}
+
+highlight {
+  font-weight: 400;
+  color: var(--highlight-color);
+  background-color: transparent;
+}
+
+#songView_page highlight {
+  font-size: 0.72em;
+  color: var(--gray-lighter);
+}
+
+footnote {
+  font-weight: 400;
+  color: var(--gray-dark);
+  background-color: transparent;
+}
+
+/* ============================================================
+   4. APPLICATION SHELL
+   ============================================================ */
+
+#app {
+  position: relative;
+  height: 100dvh;
+
+  /* DARK THEME */
+  background-color: #0d0d0d;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%23242424' fill-opacity='0.5'%3E%3Cpolygon fill-rule='evenodd' points='8 4 12 6 8 8 6 12 4 8 0 6 4 4 6 0 8 4'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* LIGHT THEME */
+:root.theme-light #app {
+background-color: #ffd6c3;
+background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%23e2ac95' fill-opacity='0.4'%3E%3Cpolygon fill-rule='evenodd' points='8 4 12 6 8 8 6 12 4 8 0 6 4 4 6 0 8 4'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--kirtan-bg, #0d0d0d);
+
+  /* soft raised-panel halo */
+  box-shadow: var(--outer-shadow);
+  transition: transform 0.22s ease, opacity 0.22s ease;
+
+  padding-top: var(--inset-top);
+  padding-bottom: var(--inset-bottom);
+  padding-left: var(--inset-left);
+  padding-right: var(--inset-right);
+
+  box-sizing: border-box;
+}
+
+@media (min-width: 721px) {
+  .page {
+    width: 720px;
+    max-width: 100%;
+    left: calc(50% - 360px);
+    right: calc(50% - 360px);
+    top: 0;
+    bottom: 0;
+    margin: 0 auto;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    inset: 0;
+    padding-top: max(var(--inset-top), 44px) !important;
+    padding-bottom: 0px !important;
+  }
+}
+
+.page--enter {
+  transform: translateX(16px);
+  opacity: 0;
+}
+
+.page .page__content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.gutter {
+  margin: 16px;
+}
+
+@media (min-width: 600px) {
+  .gutter {
+    margin: 20px 24px;
+  }
+}
+
+/* ---- required Onsen UI runtime mechanics (structural; NOT decorative) ---- */
+ons-page, ons-navigator, ons-tabbar, ons-gesture-detector {
+  display: block;
+  touch-action: manipulation;
+}
+
+ons-navigator, ons-splitter, ons-action-sheet, ons-dialog, ons-toast, ons-alert-dialog {
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+ons-toast { pointer-events: none; }
+ons-toast .toast { pointer-events: auto; }
+
+ons-tab {
+  -webkit-transform: translate3d(0, 0, 0);
+          transform: translate3d(0, 0, 0);
+}
+
+ons-page, ons-dialog, ons-alert-dialog, ons-action-sheet, ons-toast {
+  z-index: 2;
+}
+
+ons-fab, ons-speed-dial {
+  z-index: 10001;
+}
+
+ons-toolbar {
+  position: relative;
+}
+
+.toolbar,
+.toolbar--cover-content,
+.toolbar--transparent,
+.toolbar--cover-content.toolbar--transparent {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 92%;
+  max-width: 640px;
+  margin: 0 auto;
+  z-index: 50;
+  background: var(--kirtan-tabbar-bg) !important;
+  border: 1px solid var(--surface-border);
+  border-top: none;
+  border-radius: 0 0 18px 18px;
+  box-shadow: none;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+}
+
+:root.theme-light .toolbar,
+:root.theme-light .toolbar--cover-content,
+:root.theme-light .toolbar--transparent,
+:root.theme-light .toolbar--cover-content.toolbar--transparent {
+  background: #fbddd3 !important;
+}
+
+ons-toolbar .left,
+ons-toolbar .center,
+ons-toolbar .right,
+.toolbar__left,
+.toolbar__center,
+.toolbar__right,
+.toolbar--cover-content__left,
+.toolbar--cover-content__center,
+.toolbar--cover-content__right,
+.toolbar--transparent__left,
+.toolbar--transparent__center,
+.toolbar--transparent__right {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  background: transparent;
+  color: var(--toolbar-button-color, var(--highlight-color));
+}
+
+ons-toolbar .center,
+.toolbar__center,
+.toolbar--cover-content__center,
+.toolbar--transparent__center {
+  flex: 1 1 auto;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+ons-toolbar .left,
+.toolbar__left,
+.toolbar--cover-content__left,
+.toolbar--transparent__left {
+  flex: 0 0 auto;
+}
+
+ons-toolbar .right,
+.toolbar__right,
+.toolbar--cover-content__right,
+.toolbar--transparent__right {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  margin-left: auto;
+  padding-right: 8px;
+}
+
+ons-toolbar .left,
+.toolbar__left,
+.toolbar--cover-content__left,
+.toolbar--transparent__left {
+  margin-right: auto;
+}
+
+.back-btn,
+ons-toolbar-button,
+.lb-icon-btn {
+  color: var(--toolbar-button-color, var(--highlight-color)) !important;
+}
+
+.back-btn svg,
+ons-toolbar-button svg,
+.lb-icon-btn svg {
+  fill: var(--toolbar-button-color, var(--highlight-color)) !important;
+}
+
+.toolbar--material__left > .back-button,
+.toolbar--material__right > .toolbar-button {
+  display: flex !important;
+  justify-content: center;
+}
+
+/* Onsen UI click-through fixes — required for taps to reach content */
+ons-tabbar.bottom-tabbar,
+.ons-swiper,
+.ons-swiper-target {
+  pointer-events: none;
+}
+.tabbar,
+.tabbar__footer {
+  pointer-events: auto;
+}
+#tab-home,
+#tab-lists,
+.page__content {
+  pointer-events: auto;
+}
+.ons-swiper-blocker {
+  display: none;
+}
+.bottom-tabbar {
+  pointer-events: none;
+}
+.tabbar:not(.tabbar--top) {
+  pointer-events: auto;
+}
+.tabbar__content {
+  pointer-events: none;
+}
+
+/* ============================================================
+   5. NAVIGATION
+   ============================================================ */
+
+.shell__content {
+  padding-bottom: 88px;
+}
+
+/* ---- Bottom dock (Home | Lists) ---- */
+.bottom-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  padding-bottom: var(--inset-bottom);
+}
+
+.bottom-tabbar__row {
+  display: flex;
+  width: 92%;
+  max-width: 640px;
+  margin: 0 auto;
+  height: 60px;
+  background: var(--kirtan-tabbar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.12);
+}
+
+:root.theme-light .bottom-tabbar__row {
+  background: #fbddd3;
+}
+
+.tabbar.ons-tabbar__footer {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.bottom-tabbar__row button {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--sub-text-color);
+  font-size: 0.85rem;
+  transition: color 0.18s ease;
+}
+
+.bottom-tabbar__row button ons-icon {
+  margin-bottom: 0 !important;
+}
+
+.tabbar-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding-bottom: 16px;
+  background: none;
+  border: none;
+  color: var(--sub-text-color);
+  font-size: 0.7rem;
+}
+
+.tabbar-btn.active {
+  color: var(--highlight-color, #f0b43c);
+}
+
+/* ---- Toolbar / back button ---- */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--highlight-color);
+  font-size: 0.95rem;
+  padding: 10px 4px 10px 12px;
+  transition: opacity 0.15s ease;
+}
+
+@media (max-width: 520px) {
+  .back-btn span {
+    display: none;
+  }
+  .back-btn {
+    padding: 10px 8px 10px 12px;
+  }
+}
+
+.back-btn:active {
+  opacity: 0.55;
+}
+
+.back-btn .left {
+  display: contents;
+}
+
+.back-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.back-icon:hover {
+  opacity: 0.8;
+}
+
+.listMenuDelBtn {
+  position: relative;
+  margin: 6px 16px;
+}
+
+/* ---- Song-view toolbar title/author ---- */
+ons-toolbar .center.author-container {
+  line-height: unset;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center;
+  align-items: center !important;
+  overflow: hidden;
+  position: relative;
+  max-width: calc(100% - 180px);
+  min-width: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  ons-toolbar .right {
+    display: flex !important;
+    align-items: center;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    overflow: visible;
+  }
+  ons-toolbar .right .lb-icon-btn { padding: 4px; }
+  ons-toolbar .right .lb-icon-btn svg { width: 20px; height: 20px; }
+  ons-toolbar .right ons-toolbar-button { padding: 0 4px; }
+}
+
+.author-container .title-line,
+.author-container .author-line {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  line-height: 1.3;
+  padding-bottom: 2px;
+}
+
+.author-container .title-line span,
+.author-container .author-line span {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.author-container .title-line.scrolls,
+.author-container .author-line.scrolls {
+  text-align: left;
+}
+
+.author-container .title-line span.marquee,
+.author-container .author-line span.marquee {
+  animation: marquee-scroll var(--marquee-duration, 8s) linear infinite alternate;
+  padding-right: 16px;
+}
+
+.author-line .author-text {
+  font-size: 0.8em;
+  color: var(--sub-text-color);
+  text-transform: lowercase;
+  font-weight: 400;
+  line-height: 1.3;
+}
+.author-line { padding-bottom: 8px; }
+
+.title-line .title-text {
+  color: var(--highlight-color);
+  text-transform: capitalize;
+  font-weight: 700;
+  line-height: 1.3;
+  font-size: 1rem;
+  font-family: var(--material-font-family);
+}
+
+@keyframes marquee-scroll {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(var(--marquee-offset, -50px)); }
+}
+
+/* ---- Search bar (Home trigger + Search page input) ---- */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  padding: 14px 18px;
+  box-sizing: border-box;
+  background: var(--surface-color);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  font-size: 1.02rem;
+  color: var(--text-color);
+  cursor: pointer;
+  transition: border-color 0.18s ease;
+}
+
+.search-bar:hover {
+  border-color: var(--highlight-color);
+}
+
+.search-bar .search-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  fill: var(--highlight-color);
+}
+
+.search-bar .search-placeholder {
+  color: var(--sub-text-color);
+  flex: 1;
+}
+
+.search-bar input[type="text"] {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-color);
+  font-size: inherit;
+  font-family: inherit;
+  flex: 1;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.search-bar input[type="text"]::placeholder {
+  color: var(--sub-text-color);
+}
+
+.search-bar .search-clear {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: var(--gray-lighter);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.search-bar.has-value .search-clear {
+  opacity: 1;
+}
+
+#tab-home .search-bar {
+  margin: 4px 0 16px;
+}
+
+#search_page .page__content {
+  position: relative;
+  width: 100%;
+}
+
+#search_page .gutter {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.search-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 15px 16px 15px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--kirtan-bg, #0d0d0d);
+}
+
+.search-header .back-btn {
+  flex-shrink: 0;
+  padding: 10px 0 10px 4px;
+}
+
+.search-header .search-bar {
+  flex: 1;
+}
+
+#search-hint-add {
+  display: none;
+}
+
+/* ============================================================
+   6. SURFACES & LISTS
+   ============================================================ */
+
+/* .glassy — flat tonal surface, replaces the old glass-morphism look */
+.glassy,
+.hr-text,
+.toast,
+.verse-card,
+body .glassyFloat {
+  background: var(--surface-color);
+  border: 1px solid var(--surface-border);
+  box-shadow: none;
+  border-radius: 14px;
+}
+
+.alert-dialog,
+.alert-dialog-container,
+.dialog,
+.dialog-container,
+.popover__content {
+  background: var(--kirtan-bg) !important;
+  border: 1px solid var(--surface-border);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.alert-dialog-mask,
+.dialog-mask,
+.popover-mask {
+  background-color: var(--modal-scrim-color, rgba(0, 0, 0, 0.55)) !important;
+}
+
+.glassy {
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
+}
+
+body .glassyFloat {
+  transition: border-color 0.2s ease;
+}
+
+/* Rows inside an all-songs / authors / pronounce list: subtle rounded
+   rows with a small gap, rather than one glass slab. */
+.glassyEach {
+  border-radius: 14px;
+}
+
+.glassyEach > .list-item {
+  background: var(--surface-color);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  margin-bottom: 4px;
+}
+
+.glassyEach > .list-item:last-child {
+  margin-bottom: 0;
+}
+
+.glassy > ons-list-item:not(:last-child),
+.glassy > .list-item:not(:last-child) {
+  border-bottom: 1px solid var(--surface-border);
+}
+
+#tab-lists .gutter ons-list,
+#tab-lists .gutter ons-list-item,
+#tab-lists .gutter ons-list-header {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.list-header--material {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--sub-text-color);
+}
+
+/* List rows */
+.list-item__top,
+ons-list-item {
+  min-height: 62px;
+}
+
+/* ---- required List/list-item box model (structural) ---- */
+.list {
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  line-height: normal;
+  list-style-type: none;
+  text-align: left;
+  display: block;
+  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
+}
+
+.list-header {
+  margin: 0;
+  list-style: none;
+  text-align: left;
+  display: block;
+  box-sizing: border-box;
+  padding: 0 0 0 15px;
+  min-height: 24px;
+  line-height: calc(1px + 24px);
+  position: relative;
+}
+
+.list-item {
+  position: relative;
+  width: 100%;
+  list-style: none;
+  box-sizing: border-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: row;
+          flex-direction: row;
+  -webkit-justify-content: flex-start;
+          justify-content: flex-start;
+  -webkit-align-items: center;
+          align-items: center;
+  padding: 0 0 0 14px;
+  margin: 0 0 -1px 0;
+  transition: background-color 0.2s linear;
+}
+
+.list-item__top {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: row;
+          flex-direction: row;
+  -webkit-justify-content: flex-start;
+          justify-content: flex-start;
+  -webkit-align-items: center;
+          align-items: center;
+  -webkit-order: 0;
+          order: 0;
+  width: 100%;
+}
+
+.list-item--expandable {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+          flex-direction: column;
+}
+
+.list-item__expandable-content {
+  display: none;
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-order: 1;
+          order: 1;
+  overflow: hidden;
+}
+
+/* Scoped to the Authors page only — gives the expanded song list the
+   same right-side breathing room as its left side, without affecting
+   .list-item__expandable-content usage elsewhere (tattva/ārati groups). */
+#author-list .list-item__expandable-content {
+  width: 96%;
+  margin-right: 10px;
+  font-style: italic;
+  background-color: var(--kirtan-bg);
+}
+
+.list-item--expandable.list-item--expanded > .list-item__expandable-content,
+.list-item--expandable[expanded] > .list-item__expandable-content {
+  display: block;
+  height: auto;
+}
+
+.list-item__left {
+  box-sizing: border-box;
+  display: -webkit-flex;
+  display: flex;
+  padding: 12px 14px 12px 0;
+  -webkit-order: 0;
+          order: 0;
+  -webkit-align-items: center;
+          align-items: center;
+  -webkit-align-self: stretch;
+          align-self: stretch;
+  line-height: 1.2em;
+  min-height: 44px;
+}
+
+.list-item__left:empty {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.list-item__center {
+  box-sizing: border-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-grow: 1;
+          flex-grow: 1;
+  -webkit-flex-wrap: wrap;
+          flex-wrap: wrap;
+  -webkit-flex-direction: row;
+          flex-direction: row;
+  -webkit-order: 1;
+          order: 1;
+  margin-right: auto;
+  margin-left: 0;
+  -webkit-align-items: center;
+          align-items: center;
+  -webkit-align-self: stretch;
+          align-self: stretch;
+  padding: 12px 6px 12px 0;
+  line-height: 1.2em;
+  min-height: 44px;
+}
+
+.list-item__right {
+  box-sizing: border-box;
+  display: -webkit-flex;
+  display: flex;
+  margin-left: auto;
+  padding: 12px 12px 12px 0;
+  -webkit-order: 2;
+          order: 2;
+  -webkit-align-items: center;
+          align-items: center;
+  -webkit-align-self: stretch;
+          align-self: stretch;
+  line-height: 1.2em;
+  min-height: 44px;
+}
+
+.list-item__expand-chevron {
+  border-right: 2px solid var(--list-item-chevron-color, var(--sub-text-color));
+  border-bottom: 2px solid var(--list-item-chevron-color, var(--sub-text-color));
+  width: 7px;
+  height: 7px;
+  background-color: transparent;
+  z-index: 5;
+  -webkit-transform: rotate(45deg);
+          transform: rotate(45deg);
+  margin: 1px;
+}
+
+.list-item--expandable.list-item--expanded .list-item__expand-chevron,
+.list-item--expandable[expanded] .list-item__expand-chevron {
+  -webkit-transform: rotate(225deg);
+          transform: rotate(225deg);
+}
+
+.list-item--chevron:before {
+  border-right: 2px solid var(--list-item-chevron-color, var(--sub-text-color));
+  border-bottom: 2px solid var(--list-item-chevron-color, var(--sub-text-color));
+  width: 7px;
+  height: 7px;
+  background-color: transparent;
+  position: absolute;
+  content: '';
+  right: 16px;
+  top: 50%;
+  -webkit-transform: translateY(-50%) rotate(-45deg);
+          transform: translateY(-50%) rotate(-45deg);
+  z-index: 5;
+}
+
+ons-list-item .left,
+ons-list-item .right {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+ons-list-item .center:not(.isCard) {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: inline-block;
+  overflow: hidden;
+  padding-right: 0;
+  padding-top: 20px;
+}
+
+ons-list-item .center.list-item--chevron__center {
+  padding-right: 6px;
+}
+
+ons-list-item .center > span {
+  overflow: hidden;
+  width: 100%;
+}
+
+ons-list-item .list-item__subtitle {
+  width: 100%;
+  display: flex;
+}
+ons-list-item .list-item__subtitle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+ons-list-item .list-item__subtitle :first-child {
+  margin-right: 10px;
+}
+ons-list-item .list-item__subtitle :nth-child(2) {
+  margin-left: auto;
+  color: var(--sub-text-color);
+  font-style: italic;
+}
+ons-list-item .list-item__subtitle span.no_right {
+  margin-left: unset;
+}
+
+.list-item-title {
+  line-height: 1.35;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.list-item-author {
+  font-size: 85%;
+  font-weight: 400;
+  opacity: 0.6;
+  padding-left: 6px;
+  text-transform: capitalize;
+  font-style: italic;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.list-item__thumbnail {
+  filter: drop-shadow(0 0 2px var(--gray-lighter));
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid var(--highlight-color);
+  display: block;
+  margin: 0;
+}
+
+.list-item__right.right {
+  padding-right: 16px !important;
+  display: flex;
+  align-items: center;
+}
+
+.list-item--chevron:before {
+  border-color: var(--gray-lighter);
+}
+
+.list-item--material {
+  padding: 0 12px;
+}
+
+.list-item--chevron .list-item--material__left {
+  min-width: 44px;
+}
+
+/* Long-press "context" list-item separator */
+.list-item:not(:last-child) > .center:not(.isCard),
+.list-item__top:not(:last-child) > .center:not(.isCard) {
+  background-image: var(--separator-gradient);
+}
+
+/* Expandable content (verse translation, author songs, etc.) */
+.list-item__expandable-content {
+  padding: 0 16px;
+  margin-bottom: 12px;
+}
+
+.expandable-content ons-list-item,
+.list-item__expandable-content ons-list-item {
+  padding-right: 14px !important;
+}
+
+.expandable-content ons-list-item .center:not(.isCard),
+.list-item__expandable-content ons-list-item .center:not(.isCard) {
+  padding-right: 0 !important;
+}
+
+/* ============================================================
+   7. HOME PAGE
+   ============================================================ */
+
+.home-logotype {
+  display: block;
+  width: min(54%, 512px);
+  height: auto;
+  margin: 0px auto 8px auto;
+}
+
+@media (max-width: 520px) {
+  .home-logotype {
+    width: min(54%, 512px);
+    margin: -6px auto;
+  }
+}
+
+#recentHeader { display: none; }
+
+#recents:has(#recents-items:empty) #recents-actions {
+  display: none !important;
+}
+
+.recents-scroll {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+#recents-items { overflow-x: hidden; }
+
+.default_img_container {
+  box-sizing: border-box;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.default_img_container img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.home-image-wrap {
+  position: relative;
+  display: block;
+  width: 150px;
+  height: 150px;
+  margin: 8px auto 0;
+  cursor: pointer;
+  perspective: 800px;
+}
+
+.home-image-wrap img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 12px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(0deg);
+  transition: transform 0.6s ease;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.home-image-wrap.is-visible img {
+  transform: rotateY(180deg);
+}
+
+.home-image-caption {
+  position: absolute;
+  inset: 0;
+  background: var(--kirtan-tabbar-bg);
+  color: var(--text-color);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+  transition: transform 0.6s ease;
+  z-index: 2;
+}
+
+.home-image-wrap.is-visible .home-image-caption {
+  transform: rotateY(360deg);
+}
+
+.home-image-heading {
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+.home-image-subtitle {
+  font-weight: 400;
+  font-size: 0.65rem;
+  line-height: 1.3;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+/* Letter-jump grid (All songs page) */
+.group-nav {
+  display: grid;
+  top: 0;
+  z-index: 100;
+  margin-bottom: 12px;
+  padding: 0;
+}
+
+.group-nav > .glassy {
+  display: grid !important;
+  padding: 0 15px !important;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 6px;
+}
+
+.group-nav .list-header--material {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.group-nav-btn {
+  padding: 12px 0;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  white-space: nowrap;
+  background: var(--surface-color);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  color: var(--highlight-color);
+  font-family: var(--material-font-family);
+  font-size: 15px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.group-nav-btn:hover,
+.group-nav-btn:active {
+  border-color: var(--highlight-color);
+}
+
+.sanskrit-header-wrapper {
+  min-height: 56px;
+  padding: 0;
+  background: transparent;
+  position: relative;
+}
+
+.sanskrit-header {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 12px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--highlight-color);
+  /* background: var(--surface-color-strong);
+  border: 1px solid var(--surface-border); */
+  border-bottom: none;
+  letter-spacing: 3px;
+}
+
+/* ============================================================
+   8. LISTS TAB
+   ============================================================ */
+
+.shortcut-icon {
+  display: block;
+  margin-right: 5px;
+}
+
+#addSongToListBtn,
+#createListBtn {
+  text-transform: uppercase;
+  color: var(--highlight-color);
+  border: 2px dashed var(--border-color);
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  opacity: 0.9;
+  margin-bottom: 0;
+  font-size: 15px;
+}
+
+#addSongToListBtn > .center,
+#createListBtn > .center {
+  text-align: center;
+  line-height: 2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#addSongToListBtn .ons-icon,
+#createListBtn .ons-icon,
+.button--md-outline > .ons-icon {
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+.button--md-outline {
+  border: 1px solid;
+  font-size: 17px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Expandable tattva / ārati / author groups */
+.expandable-content.glassy,
+.list-item__expandable-content {
+  background: transparent;
+}
+
+/* ---- Gallery / Ken Burns slideshow ---- */
+.intro-thumb {
+  width: 100%;
+  max-width: 720px;
+  min-width: 320px;
+  aspect-ratio: 1 / 1;
+  margin: 20px auto;
+  border-radius: 14px;
+  box-shadow: var(--thumbnail-shadow);
+  overflow: hidden;
+}
+
+.ken-burns-frame { position: relative; overflow: hidden; }
+
+.ken-burns-frame .slide-layer {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  transition: opacity 1.2s ease-in-out;
+}
+.ken-burns-frame .slide-layer.slide-visible { opacity: 1; z-index: 1; }
+.ken-burns-frame .slide-layer .slideshow {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+
+.slide-caption {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 25%;
+  background: rgba(10, 11, 13, 0.62);
+  color: #f5efe5;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  transform: translateY(100%);
+  transition: transform 0.6s ease;
+  z-index: 2;
+}
+.slide-layer.slide-visible .slide-caption { transform: translateY(0%); }
+
+.slide-caption-heading {
+  font-weight: 700;
+  font-size: 1.7rem;
+  margin-bottom: 4px;
+  font-family: var(--material-font-family);
+}
+.slide-caption-body {
+  font-size: 1.15rem;
+  opacity: 0.9;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 520px) {
+  .slide-caption { height: 20%; }
+  .slide-caption-heading { font-size: 0.85rem; }
+  .slide-caption-body { font-size: 0.65rem; }
+  .intro-thumb { aspect-ratio: 2 / 3; }
+}
+
+.slide-caption.slide-caption-empty { display: none; }
+
+.ken-burns {
+  --kb-duration: 9s;
+  --kb-scale: 1.2;
+  --kb-origin: center;
+  --kb-pan-x: 0%;
+  --kb-pan-y: 0%;
+  display: block;
+  transform-origin: var(--kb-origin);
+  will-change: transform;
+  animation: wo-ken-burns var(--kb-duration) ease-in-out infinite alternate;
+}
+
+@keyframes wo-ken-burns {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(var(--kb-scale)) translate(var(--kb-pan-x), var(--kb-pan-y)); }
+}
+
+/* ============================================================
+   9. SEARCH RESULTS
+   ============================================================ */
+
+ons-list-item .center.search-result {
+  display: flex;
+  flex-direction: column;
+  white-space: normal;
+  overflow: hidden;
+}
+
+.search-result-author {
+  font-size: 0.75em;
+  font-style: italic;
+  color: var(--sub-text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-family);
+}
+
+/* ============================================================
+   10. AUTHORS / PRONUNCIATION GUIDE
+   ============================================================ */
+
+.guide-rest {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+.guide-rest.is-open { max-height: 600px; }
+
+/* (guide-intro / author-intro boxes reuse .glassy + inline styles from JS) */
+
+.author-row-center {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.author-marquee-viewport {
+  min-width: 0;
+  width: 95%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.author-marquee-text {
+  display: inline-block;
+  white-space: nowrap;
+  min-width: max-content;
+  will-change: transform;
+}
+
+.author-marquee-text.marquee {
+  animation: marquee-scroll var(--marquee-duration, 8s) linear infinite alternate;
+  padding-right: 16px;
+}
+
+.author-chevron { flex-shrink: 0; }
+
+.total-songs-num {
+  position: absolute;
+  text-align: right;
+  right: 12px;
+  top: 20px;
+  color: var(--sub-text-color);
+  opacity: 0.55;
+  font-size: 0.82rem;
+  margin-left: 6px;
+}
+
+/* Pronunciation table rows */
+ons-list#pronounce-list ons-list-item {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding-left: 0 !important;
+}
+ons-list#pronounce-list .list-item__left {
+  flex: 0 0 30% !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding-right: 0 !important;
+  font-size: 1.3rem;
+  color: var(--highlight-color);
+}
+ons-list#pronounce-list .list-item__center {
+  flex: 0 0 70% !important;
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background-image: none !important;
+  /* Override the generic single-line truncation rule below —
+     pronunciation notes are long and must wrap instead of clipping. */
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  box-sizing: border-box;
+}
+
+ons-list#pronounce-list .list-item__center .list-item__title,
+ons-list#pronounce-list .list-item__center .list-item__subtitle {
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  text-overflow: clip;
+  overflow: visible;
+}
+
+ons-list#pronounce-list .list-item__center .list-item__subtitle span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+/* ============================================================
+   11. LIST DETAIL (drag / sort / swipe-to-delete)
+   ============================================================ */
+
+.recent-swipe-item .recent-delete-btn {
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  min-width: 44px;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+}
+.recent-swipe-item.swiped .recent-delete-btn {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.recent-swipe-item.swiped .center {
+  transform: translateX(-8px);
+  transition: transform 0.25s ease;
+}
+
+#list-list .recent-swipe-item:nth-child(even),
+#recents-items .recent-swipe-item:nth-child(even) {
+  background: var(--kirtan-tabbar-bg);
+}
+#list-list .recent-swipe-item:nth-child(even) .center,
+#recents-items .recent-swipe-item:nth-child(even) .center {
+  background: transparent;
+}
+
+.sortable-chosen {
+  background-color: var(--sortable-chosen-bg);
+  margin-top: 5px;
+  margin-left: 20px;
+}
+.sortable-ghost {
+  background-color: var(--sortable-ghost-bg);
+}
+
+/* ============================================================
+   12. SONG VIEW — the primary reading surface
+   ============================================================ */
+
+#songView_page .page__content {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+#all_songs_page .page__content,
+#authors_page .page__content,
+#pronounce_page .page__content,
+#settings_page .page__content { padding-top: 40px; }
+
+#songView_page .page__content { padding-top: 65px; }
+#songView_page .toolbar { height: 72px; }
+
+/* Divider between one verse+translation block and the next */
+#verseList > ons-list-item:not(:last-child) {
+  border-bottom: 1px solid var(--kirtan-page-surround);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+/* Keep back/font/share controls anchored to the top of the taller
+   toolbar, instead of vertically centering as the bar grows to fit
+   the two-line title/author stack. */
+#songView_page ons-toolbar .left,
+#songView_page ons-toolbar .right,
+#songView_page .toolbar__left,
+#songView_page .toolbar__right,
+#songView_page .toolbar--cover-content__left,
+#songView_page .toolbar--cover-content__right,
+#songView_page .toolbar--transparent__left,
+#songView_page .toolbar--transparent__right {
+  align-items: flex-start !important;
+  padding-top: 10px;
+}
+
+#songView_page ons-toolbar .center,
+#songView_page .toolbar__center,
+#songView_page .toolbar--cover-content__center,
+#songView_page .toolbar--transparent__center {
+  align-items: flex-start !important;
+  padding-top: 6px;
+}
+
+/* ---- Font-size controls ---- */
+.lb-icon-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--toolbar-button-color, var(--highlight-color));
+}
+.lb-icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+.lb-font-btn { opacity: 0.85; transition: opacity 0.2s; }
+.lb-font-btn:hover { opacity: 1; }
+ons-toolbar .right .lb-icon-btn { margin-left: 4px; }
+
+#songViewPopover {
+  top: 25% !important;
+  left: 65% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  position: fixed !important;
+}
+#songViewPopover .popover__arrow { display: none !important; }
+#songViewPopover ons-list-item {
+  color: var(--highlight-color);
+  text-transform: uppercase;
+  font-size: initial;
+  letter-spacing: 0.02em;
+}
+#songViewPopover ons-list-item ons-icon { color: var(--highlight-color); }
+#songViewPopover .list-item__left { min-width: 30px; }
+
+/* ---- Verse card (the reading unit) ---- */
+.isCard { padding: 0; display: block; }
+
+.verse-card {
+  position: relative;
+  padding: 10px 16px;
+  margin: 6px 0;
+  box-sizing: border-box;
+  display: block;
+  border-radius: 16px;
+}
+
+.verse-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  line-height: 1.7;
+  font-family: var(--font-family);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-color);
+  margin: 9px 0;
+  max-width: 42em;
+  margin-inline: auto;
+}
+
+#verseList span {
+  display: block;
+  text-indent: -1em;
+  padding-left: 1em;
+  font-weight: 600;
+  margin-bottom: 0.3em;
+  line-height: 1.3;
+}
+
+#verseList span.lineIndent:not(:last-child) {
+  padding-bottom: 0.6em;
+}
+
+#verseList b {
+  color: var(--highlight-color);
+  font-weight: 700;
+}
+
+/* ---- Śloka number marker ---- */
+.hr-text {
+  position: absolute;
+  top: 0;
+  right: 0;
+  line-height: 1;
+  outline: 0;
+  border: 0;
+  color: var(--sub-text-color);
+  text-align: center;
+  height: auto;
+  width: auto;
+  min-width: 2em;
+  margin: 0;
+  border-radius: 0 16px 0 10px;
+  background-color: var(--surface-color-strong);
+  font-size: small;
+}
+
+:root.theme-light .hr-text {
+  background-color: #ffddcc;  /* #f8c3af fed5c1 */
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.hr-text::after {
+  content: attr(data-content);
+  position: relative;
+  display: inline-block;
+  padding: 4px 10px;
+  line-height: 1.2;
+  color: var(--sub-text-color);
+  background-color: inherit;
+  font-family: var(--material-font-family);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* ---- Translation (belongs visually to the verse above) ---- */
+.trans-container {
+  color: var(--sub-text-color);
+  font-family: var(--material-font-family);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: justify;
+  text-indent: 1.6rem;
+  padding-top: 4px;  /* border-top: 1px dashed var(--border-color); */
+  margin-top: 4px;
+}
+
+.trans-intro {
+  text-align: center;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+  font-style: italic;
+  color: var(--text-color);
+}
+
+#transAvail {
+  display: block;
+  text-align: center;
+  color: var(--sub-text-color);
+  font-size: 0.8rem;
+  padding: 8px 0 0;
+}
+
+#footerSpacer { height: 33vh; }
+#footerSpacer > div { height: 100%; }
+#footerSpacer .listSongView { position: sticky; bottom: 0; }
+
+/* ---- In-list prev/next nav bar (viewing a song from a list) ---- */
+.listSongView {
+  padding: 10px;
+  opacity: 0.85;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.listSongView span {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 18px;
+  color: var(--sub-text-color);
+}
+.listSongView ons-button {
+  vertical-align: middle;
+  font-size: 36px;
+  overflow: unset;
+  color: var(--highlight-color);
+}
+
+/* ---- Smart footer navigation (prev/next song dock) ---- */
+.song-footer-nav {
+  position: relative;
+  margin: 0 6px 24px 6px;
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+  pointer-events: auto;
+}
+
+.song-footer-nav .bottom-tabbar__row {
+  display: flex;
+  width: 95%;
+  max-width: 600px;
+  margin: 0 auto;
+  height: 62px;
+  background: var(--kirtan-tabbar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.song-footer-nav .footer-nav-prev,
+.song-footer-nav .footer-nav-next {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  text-transform: capitalize;
+  font-style: italic;
+  color: var(--text-color);
+  cursor: pointer;
+  touch-action: manipulation;
+  padding: 0 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.song-footer-nav .footer-nav-prev .footer-nav-title,
+.song-footer-nav .footer-nav-next .footer-nav-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.song-footer-nav .footer-nav-prev { justify-content: flex-start; padding-left: 12px; }
+.song-footer-nav .footer-nav-next { justify-content: flex-end; padding-right: 12px; }
+
+.song-footer-nav .footer-nav-icon { flex-shrink: 0; opacity: 0.75; color: var(--highlight-color); }
+
+.song-footer-nav .footer-nav-title {
+  white-space: normal;
+  overflow: hidden;
+  font-size: 0.85rem;
+  color: var(--text-color);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.song-footer-nav .footer-nav-divider {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  color: var(--highlight-color);
+  font-size: 1.2rem;
+  font-weight: 300;
+  opacity: 0.5;
+  padding: 0 4px;
+}
+
+.song-footer-nav .footer-nav-prev:active,
+.song-footer-nav .footer-nav-next:active {
+  opacity: 0.6;
+}
+
+@media (max-width: 520px) {
+  .song-footer-nav { margin: 8px 4px 16px 4px; }
+  .song-footer-nav .bottom-tabbar__row { height: 60px; }
+  .song-footer-nav .footer-nav-title { font-size: 0.8rem; }
+  .song-file-name { color: transparent; }
+}
+
+.song-file-name {
+  color: var(--sub-text-color);
+  font-size: 0.5rem;
+  font-family: var(--material-font-family);
+  vertical-align: 0.25em;
+  font-style: normal;
+  font-weight: 400;
+  margin-left: 6px;
+  opacity: 0.6;
+}
+
+/* ============================================================
+   13. SETTINGS PAGE
+   ============================================================ */
+
+.sample-text {
+  text-transform: none;
+  font-size: 1.15rem;
+  background-image: none;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  background-color: var(--surface-color);
+  border-radius: 0 0 12px 12px;
+  margin: 0 12px 12px 12px;
+  text-align: center;
+  color: var(--highlight-color);
+}
+
+@keyframes spin-360 { to { transform: rotate(360deg); } }
+#forceUpdateBtn.is-working .update-icon {
+  animation: spin-360 1s linear infinite;
+}
+
+/* ---- required Switch component mechanics (structural) ---- */
+.switch {
+  display: inline-block;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  min-width: 51px;
+  padding: 0 20px;
+  border: none;
+  overflow: visible;
+  width: 51px;
+  height: 32px;
+  z-index: 0;
+  text-align: left;
+}
+
+.switch__input {
+  position: absolute;
+  right: 0; top: 0; left: 0; bottom: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  -webkit-appearance: none;
+          appearance: none;
+  z-index: 0;
+}
+
+.switch__toggle {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 30px;
+  transition-property: all;
+  transition-duration: 0.35s;
+  transition-timing-function: ease-out;
+}
+
+.switch__handle {
+  box-sizing: border-box;
+  position: absolute;
+  content: '';
+  border-radius: 28px;
+  height: 28px;
+  width: 28px;
+  left: 1px;
+  top: 2px;
+  transition-property: all;
+  transition-duration: 0.35s;
+  transition-timing-function: cubic-bezier(.59, .01, .5, .99);
+}
+
+:checked + .switch__toggle > .switch__handle {
+  left: 21px;
+}
+
+:disabled + .switch__toggle {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Sharp, glow-free switches */
+.switch,
+.switch__toggle,
+.switch__handle {
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.switch__toggle {
+  background: #6b6f74 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.switch__handle {
+  background-color: #e6e2d8 !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+:checked + .switch__toggle {
+  background: var(--on-color) !important;
+}
+:checked + .switch__toggle > .switch__handle {
+  background-color: #ffffff !important;
+}
+:root.theme-light .switch__toggle {
+  background: #d9c9b8 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root.theme-light :checked + .switch__toggle {
+  background: var(--on-color) !important;
+}
+
+/* ============================================================
+   14. CONTROLS (fab, popover, dialog, toast)
+   ============================================================ */
+
+/* ---- Structural mechanics (required now that offline-onsenui.css
+   is removed) — fab, popover, dialog, alert-dialog, toast ---- */
+ons-fab.fab, ons-speed-dial-item.fab, button.fab {
+  position: relative;
+  display: inline-block;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  width: 56px;
+  height: 56px;
+  text-decoration: none;
+  font-size: 25px;
+  line-height: 56px;
+  vertical-align: middle;
+  text-align: center;
+  border: 0 solid currentColor;
+  border-radius: 50%;
+  overflow: hidden;
+  transition: all 0.1s linear;
+}
+
+ons-fab.fab--bottom__right, button.fab--bottom__right {
+  top: auto;
+  bottom: 20px;
+  right: 20px;
+  left: auto;
+  position: absolute;
+}
+
+.popover {
+  position: absolute;
+  z-index: 20001;
+}
+
+.popover-mask {
+  left: 0; right: 0; top: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+  position: absolute;
+  z-index: 19999;
+}
+
+.popover__content {
+  box-sizing: border-box;
+  display: block;
+  width: 220px;
+  overflow: auto;
+  min-height: 100px;
+  max-height: 100%;
+  border-radius: 8px;
+  pointer-events: auto;
+}
+
+.dialog {
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%);
+  margin: auto auto;
+  overflow: hidden;
+  min-width: 270px;
+  min-height: 100px;
+  text-align: left;
+}
+
+.dialog-container {
+  height: inherit;
+  min-height: inherit;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.dialog-mask {
+  position: absolute;
+  top: 0; right: 0; left: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.alert-dialog {
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%);
+  width: 270px;
+  margin: auto;
+  border-radius: 18px;
+  overflow: visible;
+  max-width: 95%;
+  font-family: 'Nunito Sans', sans-serif;
+}
+
+.alert-dialog-container {
+  height: inherit;
+  padding-top: 16px;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.alert-dialog-title {
+  font-size: 17px;
+  font-weight: 500;
+  padding: 0 8px;
+  text-align: center;
+}
+
+.alert-dialog-content {
+  box-sizing: border-box;
+  padding: 4px 12px 8px;
+  font-size: 14px;
+  min-height: 36px;
+  text-align: center;
+}
+
+.alert-dialog-footer {
+  width: 100%;
+}
+
+.alert-dialog-button {
+  box-sizing: border-box;
+  font-size: 16px;
+  padding: 0 8px;
+  margin: 0;
+  display: block;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.2);
+  text-align: center;
+  height: 44px;
+  line-height: 44px;
+  outline: none;
+  border: none;
+}
+
+.alert-dialog-footer--rowfooter {
+  white-space: nowrap;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+          flex-wrap: wrap;
+}
+
+.alert-dialog-button--rowfooter {
+  -webkit-flex: 1;
+          flex: 1;
+  display: block;
+  width: 100%;
+}
+
+.alert-dialog-mask {
+  position: absolute;
+  top: 0; right: 0; left: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.toast {
+  position: absolute;
+  z-index: 2;
+  left: 8px;
+  right: 8px;
+  bottom: 56px;
+  margin: 8px 15%;
+  border-radius: 8px;
+  display: -webkit-flex;
+  display: flex;
+  min-height: 62px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  background: var(--kirtan-page-surround);
+  padding: 16px 16px;
+}
+
+.toast__message {
+  font-size: 14px;
+  -webkit-flex-grow: 1;
+          flex-grow: 1;
+  text-align: left;
+  margin: 0 16px 0 0;
+  white-space: normal;
+}
+
+.toast__button {
+  font-size: 14px;
+  -webkit-flex-grow: 0;
+          flex-grow: 0;
+  -webkit-appearance: none;
+          appearance: none;
+  border: none;
+  background-color: transparent;
+  text-transform: uppercase;
+}
+
+#toTop {
+  margin-top: 48px;
+  color: var(--highlight-color);
+  pointer-events: auto;
+  transition: opacity 0.2s ease;
+  display: block;
+  width: 48px;
+  height: 48px;
+}
+#toTop:hover { opacity: 0.85; }
+
+.dialog-list {
+  margin: 10px -12px;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.alert-dialog-content { margin: 10px 0; }
+
+ons-popover div.popover__content {
+  width: 180px;
+  min-height: 0;
+  background: var(--kirtan-tabbar-bg);
+  opacity: 1;
+}
+
+/* ============================================================
+   15. UTILITIES / STATE
+   ============================================================ */
+
+/* Prevent context menu / drag ghosting on images throughout */
+.home-image-wrap img,
+.default_img_container img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ============================================================
+   16. RESPONSIVE ENHANCEMENTS
+   ============================================================ */
+
+@media (min-width: 721px) {
+  .verse-container { font-size: 1.05em; }
+  .trans-container { max-width: 42em; margin-inline: auto; }
+  .search-header,
+  .group-nav > .glassy { padding-left: 24px; padding-right: 24px; }
+}
+
+/* ============================================================
+   17. ACCESSIBILITY / REDUCED MOTION / FOCUS
+   ============================================================ */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible,
+ons-list-item:focus-visible {
+  outline: 2px solid var(--highlight-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .page { transition: none; }
+  .page--enter { transform: none; opacity: 1; }
+}
+
+/* ================================================================
+   18. SCROLLBARS
+   ================================================================ */
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--highlight-color) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--highlight-color);
+  border-radius: 999px;
+  transition: background-color var(--transition-fast);
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--second-highlight-color); }
