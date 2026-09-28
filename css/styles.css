@@ -450,6 +450,47 @@ ons-fab, ons-speed-dial {
   z-index: 10001;
 }
 
+/* Ripple mechanics (were in offline-onsenui.css, now removed) */
+ons-ripple,
+.ripple {
+  display: block;
+  position: absolute;
+  overflow: hidden;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.ripple__background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ripple__wave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+ons-list-item .ripple__wave,
+ons-list-item .ripple__background {
+  background: rgba(189, 189, 189, 0.3);
+}
+
 ons-toolbar {
   position: relative;
 }
