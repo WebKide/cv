@@ -5,7 +5,7 @@
 
 'use strict';
 
-const VERSION = 'v2.01';
+const VERSION = 'v2.02';
 const CACHE = `cancionero-${VERSION}`;
 
 const BASE = self.location.pathname.substring(

@@ -1723,6 +1723,13 @@ ons-list#pronounce-list .list-item__center .list-item__subtitle span {
    11. LIST DETAIL (drag / sort / swipe-to-delete)
    ============================================================ */
 
+ons-list-item.recent-swipe-item > .right.recent-delete-btn {
+  min-height: 0 !important;
+  align-self: auto !important;
+  filter: none !important;
+  padding: 12px 0 !important;
+}
+
 .recent-swipe-item .recent-delete-btn {
   opacity: 0;
   transform: translateX(20px);
