@@ -329,7 +329,8 @@ highlight {
 }
 
 #songView_page highlight {
-  font-size: 0.72em;
+  font-size: 0.89em;
+  font-weight: 400;
   color: var(--gray-lighter);
 }
 
@@ -393,7 +394,7 @@ background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/s
 @media (max-width: 520px) {
   .page {
     inset: 0;
-    padding-top: max(var(--inset-top), 44px) !important;
+    padding-top: max(var(--inset-top), 6px) !important;  /* safe-iOS */
     padding-bottom: 0px !important;
   }
 }
@@ -516,6 +517,11 @@ ons-toolbar {
   flex-direction: row !important;
   align-items: center !important;
   flex-wrap: nowrap !important;
+}
+
+#songView_page .toolbar {
+  width: 96%;
+  max-width: 712px;
 }
 
 :root.theme-light .toolbar,
@@ -1309,18 +1315,62 @@ ons-list-item .list-item__subtitle span.no_right {
    7. HOME PAGE
    ============================================================ */
 
-.home-logotype {
+.home-logo-wrap {
+  position: relative;
   display: block;
   width: min(54%, 512px);
-  height: auto;
-  margin: 0px auto 8px auto;
+  margin: 0 auto 8px;
+  aspect-ratio: 512 / 112;
+  perspective: 800px;
+  cursor: pointer;
+  text-align: center;
 }
 
 @media (max-width: 520px) {
-  .home-logotype {
+  .home-logo-wrap {
     width: min(54%, 512px);
-    margin: -6px auto;
+    margin: -6px auto 8px;
   }
+}
+
+.home-logotype {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(0deg);
+  transition: transform 0.6s ease;
+}
+
+.home-logo-wrap.is-visible .home-logotype {
+  transform: rotateY(180deg);
+}
+
+.home-logo-caption {
+  position: absolute;
+  inset: 0;
+  background: var(--kirtan-tabbar-bg);
+  color: var(--text-color);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+  transition: transform 0.6s ease;
+  z-index: 2;
+}
+
+.home-logo-wrap.is-visible .home-logo-caption {
+  transform: rotateY(360deg);
 }
 
 #recentHeader { display: none; }
@@ -1343,6 +1393,13 @@ ons-list-item .list-item__subtitle span.no_right {
   justify-content: center;
   align-items: center;
 }
+
+/* Home page's image container reserves its final (max) height up front
+   and bottom-anchors the image, so growth expands upward — away from
+   the fixed bottom tabbar — instead of downward into it. */
+#tab-home .default_img_container {
+  align-items: flex-end;
+}
 .default_img_container img {
   max-width: 100%;
   max-height: 100%;
@@ -1352,11 +1409,10 @@ ons-list-item .list-item__subtitle span.no_right {
 .home-image-wrap {
   position: relative;
   display: block;
-  width: 150px;
-  height: 150px;
+  width: var(--home-image-size, 150px);
+  height: var(--home-image-size, 150px);
+  max-width: 100%;
   margin: 8px auto 0;
-  cursor: pointer;
-  perspective: 800px;
 }
 
 .home-image-wrap img {
@@ -1367,42 +1423,10 @@ ons-list-item .list-item__subtitle span.no_right {
   display: block;
   object-fit: cover;
   border-radius: 12px;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  transform: rotateY(0deg);
-  transition: transform 0.6s ease;
   -webkit-user-drag: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-}
-
-.home-image-wrap.is-visible img {
-  transform: rotateY(180deg);
-}
-
-.home-image-caption {
-  position: absolute;
-  inset: 0;
-  background: var(--kirtan-tabbar-bg);
-  color: var(--text-color);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  text-align: left;
-  padding: 10px 14px;
-  box-sizing: border-box;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  transform: rotateY(180deg);
-  transition: transform 0.6s ease;
-  z-index: 2;
-}
-
-.home-image-wrap.is-visible .home-image-caption {
-  transform: rotateY(360deg);
 }
 
 .home-image-heading {
@@ -1440,6 +1464,7 @@ ons-list-item .list-item__subtitle span.no_right {
 }
 
 .group-nav-btn {
+  position: relative;
   padding: 12px 0;
   width: 100%;
   box-sizing: border-box;
@@ -1452,6 +1477,31 @@ ons-list-item .list-item__subtitle span.no_right {
   font-family: var(--material-font-family);
   font-size: 15px;
   transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Periodic-table-style count badge, top-right corner — same visual
+   language as .hr-text (the verse-number marker in songView). */
+.group-nav-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 1.4em;
+  padding: 1px 4px;
+  border-radius: 0 10px 0 8px;
+  background-color: var(--surface-color-strong);
+  color: var(--sub-text-color);
+  font-family: var(--material-font-family);
+  font-size: 0.55rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+}
+
+:root.theme-light .group-nav-count {
+  color: var(--tabbar-text-color);
+  background-color: #ffddcc;
+  border-left: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 .group-nav-btn:hover,
@@ -1634,11 +1684,36 @@ ons-list-item .list-item__subtitle span.no_right {
    9. SEARCH RESULTS
    ============================================================ */
 
+#search-list-page ons-list-item {
+  min-height: 0;
+}
+
+#search-list-page ons-list-item:nth-child(even) {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(0, 0, 0, 0.25),
+    transparent
+  );
+}
+
+/* LIGHT THEME Search Results alternate background */
+:root.theme-light #search-list-page ons-list-item:nth-child(even) {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.25),
+    transparent
+  );
+}
+
 ons-list-item .center.search-result {
   display: flex;
   flex-direction: column;
   white-space: normal;
   overflow: hidden;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 .search-result-author {
@@ -1655,6 +1730,14 @@ ons-list-item .center.search-result {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-family);
+}
+
+.search-result-jsontitle {
+  font-size: 0.75em;
+  color: var(--sub-text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ============================================================
@@ -1809,6 +1892,242 @@ ons-list-item.recent-swipe-item > .right.recent-delete-btn {
   background-color: var(--sortable-ghost-bg);
 }
 
+/* ================================================================
+   11b. APP SPECIFIC (migrated inline styles)
+   ================================================================ */
+
+/* ---- Recents action bar (home_page shell) ---- */
+#recents-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 10px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.recents-icon-wrap {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+}
+
+.recents-section-label {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+#recentsMenuBtn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  z-index: 3;
+  cursor: grab;
+  touch-action: none;
+}
+
+/* ---- Recent swipe-to-delete item (base + static delete-btn box model;
+   transform/transition on .recent-delete-btn stay inline — see JS) ---- */
+.recent-swipe-item {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.recent-item-center {
+  position: relative;
+  z-index: 2;
+  background: inherit;
+  transition: margin-right 0.25s ease;
+  padding-right: 16px;
+}
+
+.recent-delete-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 90px;
+  background: #c62828;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  z-index: 1;
+  color: #fff;
+  font-weight: 400;
+  font-size: 0.65rem;
+}
+
+/* ---- Lists tab section headers ---- */
+.lists-section-header {
+  text-align: center;
+  opacity: 0.6;
+  font-size: 1.02rem;
+  font-weight: 700;
+  width: 100%;
+  margin: 16px 0 8px 0;
+  color: var(--highlight-color);
+}
+
+.create-list-btn {
+  margin-top: 10px;
+}
+
+/* ---- toTop FAB (shared across all_songs/search/authors/pronounce/songview) ---- */
+.fab-toTop {
+  transition: opacity 0.25s ease;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fab-toTop--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- Home default image (shell page, empty-state) ---- */
+.default_img_container--home {
+  display: block;
+  padding-top: 15px;
+  text-align: center;
+}
+
+/* ---- Song view hint ---- */
+.songview-hint-text {
+  text-align: center;
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+/* ---- Generic height utilities ---- */
+.height--full { height: 100%; }
+.height--quarter { height: 33vh; }
+
+/* ---- Settings page ---- */
+.settings-list {
+  margin: 15px 0;
+}
+
+.settings-list-header {
+  text-align: center;
+  opacity: 0.6;
+  font-size: 16px;
+  font-weight: 700;
+  width: 100%;
+  margin-top: 8px;
+  color: var(--highlight-color);
+}
+
+.settings-footer-header {
+  text-transform: none;
+  font-size: 0.85rem;
+  background-image: none;
+  text-align: center;
+}
+
+.update-title {
+  font-weight: 600;
+}
+
+.update-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* ---- All-songs page: group-nav glassy box + headings ---- */
+.group-nav-box {
+  padding: 8px 4px 12px;
+}
+
+.group-nav-heading {
+  text-align: center;
+  opacity: 0.6;
+  font-size: 16px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.group-nav-heading--bottom {
+  margin-bottom: 0;
+  margin-top: 8px;
+}
+
+/* ---- Authors / Pronunciation guide intro blurb ---- */
+.guide-intro {
+  text-align: left;
+  font-size: 16px;
+  padding: 16px;
+  margin: 12px 6px;
+  touch-action: manipulation; /* prevents the browser from zooming on double-tap */
+}
+
+.guide-teaser,
+.guide-rest-text {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.guide-teaser {
+  margin-bottom: 0.5em;
+}
+
+.guide-rest {
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+  padding-top: 1em;
+}
+
+.guide-prompt {
+  margin: 0.8em 0 0;
+  opacity: 0.8;
+  font-style: normal;
+  font-size: 0.85em;
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+  color: var(--highlight-color);
+}
+
+/* ---- Pronunciation table row: script-column cell ---- */
+.pronounce-script-cell {
+  font-size: 1.4rem;
+  min-width: 28px;
+  width: 32px;
+  color: var(--highlight-color);
+}
+
+/* ---- Lists tab: intro shortcuts list + gallery section ---- */
+.intro-songs-list {
+  margin: 15px 0;
+}
+
+.gallery-info-header {
+  text-align: center;
+  opacity: 0.6;
+  font-size: 16px;
+  font-weight: 700;
+  width: 100%;
+  margin-top: 8px;
+  color: var(--highlight-color);
+}
+
 /* ============================================================
    12. SONG VIEW — the primary reading surface
    ============================================================ */
@@ -1955,9 +2274,9 @@ ons-toolbar .right .lb-icon-btn { margin-left: 4px; }
 }
 
 :root.theme-light .hr-text {
-  background-color: #ffddcc;  /* #f8c3af fed5c1 */
-  border-left: 1px solid rgba(0, 0, 0, 0.06);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background-color: #ffddcc;
+  border-left: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 .hr-text::after {
@@ -2004,6 +2323,33 @@ ons-toolbar .right .lb-icon-btn { margin-left: 4px; }
 #footerSpacer { height: 33vh; }
 #footerSpacer > div { height: 100%; }
 #footerSpacer .listSongView { position: sticky; bottom: 0; }
+
+.jump-to-song-pill {
+  display: block;
+  margin: 0 auto 16px;
+  padding: 10px 20px;
+  max-width: 80%;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: var(--surface-color);
+  color: var(--highlight-color);
+  font-size: 0.85rem;
+  font-family: var(--material-font-family);
+  text-align: center;
+  white-space: normal;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.jump-to-song-pill b {
+  color: var(--text-color);
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 700;
+}
+
+.jump-to-song-pill:active {
+  opacity: 0.7;
+}
 
 /* ---- In-list prev/next nav bar (viewing a song from a list) ---- */
 .listSongView {
@@ -2451,9 +2797,15 @@ ons-fab.fab--bottom__right, button.fab--bottom__right {
   color: var(--highlight-color);
   pointer-events: auto;
   transition: opacity 0.2s ease;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 48px;
   height: 48px;
+  border-radius: 50%;
+  background: var(--surface-color-strong);
+  border: 1px solid var(--surface-border);
 }
 #toTop:hover { opacity: 0.85; }
 

@@ -34,8 +34,8 @@ const SANSKRIT_GROUPS = [
   { key: 'ga', dev: 'GA - ग - গ', rom: 'ga', match: t => t.startsWith('g')  && !t.startsWith('gh') },
   { key: 'gha', dev: 'GHA - घ - ঘ', rom: 'gha', match: t => t.startsWith('gh') },
   { key: 'ṅa', dev: 'ṄA - ङ - ঙ', rom: 'ṅa', match: t => t.startsWith('ṅ') },
-  { key: 'ca', dev: 'CA - च - চ', rom: 'ca', match: t => t.startsWith('c')  && !t.startsWith('ch') },
-  { key: 'cha', dev: 'CHA - छ - ছ', rom: 'cha', match: t => t.startsWith('ch') },
+  { key: 'cha', dev: 'CHA - च - চ', rom: 'cha', match: t => t.startsWith('c') && !t.startsWith('c\u1E23') },
+  { key: 'c\u1E23a', dev: 'C\u1E22A - छ - ছ', rom: 'c\u1E23a', match: t => t.startsWith('c\u1E23') },
   { key: 'ja', dev: 'JA - ज - জ', rom: 'ja', match: t => t.startsWith('j')  && !t.startsWith('jh') && !t.startsWith('jñ') },
   { key: 'jha', dev: 'JHA - झ - ঝ', rom: 'jha', match: t => t.startsWith('jh') },
   { key: 'ña', dev: 'ÑA - ञ - ঞ', rom: 'ña', match: t => t.startsWith('ñ') },
@@ -82,7 +82,11 @@ function buildSortedToc() {
   // 1. Collect all songs with titles — window.INDEX is now an object keyed
   // by file_name, so iterate its keys instead of array indices.
   const songs = Object.keys(window.INDEX)
-    .map((fileName) => ({ id: fileName, title: window.getSongTitle(fileName) }))
+    .map((fileName) => ({
+      id: fileName,
+      title: window.getSongTitle(fileName),
+      jsonTitle: (window.INDEX[fileName].title || '')
+    }))
     .filter((item) => item.title);
  
   // 2. Sort alphabetically, ignoring leading punctuation
@@ -97,7 +101,11 @@ function buildSortedToc() {
   SANSKRIT_GROUPS.forEach(g => groupMap.set(g.key, { group: g, songs: [] }));
  
   songs.forEach(song => {
-    const clean = song.title.replace(/^\p{P}+/u, '').trim().toLowerCase();
+    const clean = song.title
+      .normalize('NFC')
+      .replace(/^[\p{P}\p{Cf}\uFEFF]+/u, '')
+      .trim()
+      .toLowerCase();
     let placed = false;
     for (const g of SANSKRIT_GROUPS) {
       if (g.match(clean)) {
@@ -173,12 +181,10 @@ function render_groupNav(page) {
  
   /* ── glassy box (same pattern as lists_page.js) ── */
   const box = document.createElement('div');
-  box.className = 'glassy';
-  box.style.padding = '8px 4px 12px';
+  box.className = 'glassy group-nav-box';
  
   const heading = document.createElement('div');
-  heading.className = 'list-header--material';
-  heading.style.cssText = 'text-align:center; opacity:.6; font-size:16px; width:100%; margin-bottom:8px;';
+  heading.className = 'list-header--material group-nav-heading';
   heading.textContent = 'PRESIONA UN BOTÓN PARA SALTAR';
   box.appendChild(heading);
  
@@ -187,21 +193,41 @@ function render_groupNav(page) {
   const navMethod  = isDetail ? 'replacePage' : 'pushPage';
  
   SANSKRIT_GROUPS.forEach((g) => {
-    const hasSongs = sortedToc.some((row) => row.type === 'header' && row.group.key === g.key);
-    if (!hasSongs) return;
+    const headerRow = sortedToc.find((row) => row.type === 'header' && row.group.key === g.key);
+    if (!headerRow) return;
  
     const btn = document.createElement('button');
     btn.className = 'group-nav-btn';
-    btn.textContent = (g.key.length > 1 && g.key.endsWith('a') ? g.key.slice(0, -1) : g.key).toUpperCase();
+ 
+    const label = document.createElement('span');
+    label.textContent = (g.key.length > 1 && g.key.endsWith('a') ? g.key.slice(0, -1) : g.key).toUpperCase();
+    btn.appendChild(label);
+ 
+    const countEl = document.createElement('span');
+    countEl.className = 'group-nav-count';
+    countEl.textContent = headerRow.count;
+    btn.appendChild(countEl);
+ 
     btn.onclick = () => {
       document.getElementById('navigator')[navMethod]('tmpl-group-detail', { data: { groupKey: g.key } });
     };
     box.appendChild(btn);
   });
+
+  // Anything that matched no Sanskrit group still needs a way to be reached.
+  const hasUncategorized = sortedToc.some((row) => row.type === 'header' && row.group.key === '#');
+  if (hasUncategorized) {
+    const btn = document.createElement('button');
+    btn.className = 'group-nav-btn';
+    btn.textContent = '#';
+    btn.onclick = () => {
+      document.getElementById('navigator')[navMethod]('tmpl-group-detail', { data: { groupKey: '#' } });
+    };
+    box.appendChild(btn);
+  }
  
   const heading2 = document.createElement('div');
-  heading2.className = 'list-header--material';
-  heading2.style.cssText = 'text-align:center; opacity:.6; font-size:16px; width:100%; margin-top:8px;';
+  heading2.className = 'list-header--material group-nav-heading group-nav-heading--bottom';
   heading2.textContent = 'DESLIZA PARA NAVEGAR';
   box.appendChild(heading2);
  
@@ -251,7 +277,7 @@ function group_detail_page_init(page) {
  
   songs.forEach((song) => {
     listElement.appendChild(
-      gen_listItem(song.title, () => showSongViewUI(song.id, null, 'replace'))
+      gen_listItem(song.title, () => showSongViewUI(song.id, null, 'replace'), song.jsonTitle)
     );
   });
 }
@@ -276,20 +302,7 @@ function all_songs_page_init(page) {
   }
  
   /* ── scroll-to-top FAB wiring ── */
-  const scrollArea = page.querySelector(".page__content");
-  const fab = page.querySelector("#toTop");
-  if (scrollArea && fab) {
-    scrollArea.addEventListener('scroll', () => {
-      if (scrollArea.scrollTop > 300) {
-        fab.style.opacity = "1";
-        fab.style.pointerEvents = "auto";
-        fab.style.visibility = "visible";
-      } else {
-        fab.style.opacity = "0";
-        fab.style.pointerEvents = "none";
-      }
-    });
-  }
+  wireToTopFab(page);
  
   render_songList(sortedToc);
 }
@@ -306,7 +319,7 @@ const render_songList = (songs) => {
       if (entry.type === 'header') {
         return createSanskritHeader(entry.group, entry.count);
       }
-      return gen_listItem(entry.title, () => showSongViewUI(entry.id, null, 'replace'));
+      return gen_listItem(entry.title, () => showSongViewUI(entry.id, null, 'replace'), entry.jsonTitle);
     },
     countItems: () => songs.length,
     calculateItemHeight: (index) => {

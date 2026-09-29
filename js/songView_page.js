@@ -57,6 +57,10 @@ async function songView_page_init(page) {
     return;
   }
 
+  // 3b. Extract an inline "jump to song" marker, e.g. {"0l.json"}, from the translation
+  const jumpMatch = (song.es_translation || song.en_translation || '').match(/\{([^{}"]+\.json)\}/);
+  const jumpTargetId = jumpMatch ? jumpMatch[1] : null;
+
   // 4. Render Header (Title & Author)
   const titleElement = page.querySelector('#songTitle');
   if (titleElement) {
@@ -112,23 +116,11 @@ async function songView_page_init(page) {
   }
 
   /* ── scroll-to-top FAB wiring ── */
-  const scrollArea = page.querySelector(".page__content");
-  const fab = page.querySelector("#toTop");
-  if (scrollArea && fab) {
-    scrollArea.addEventListener('scroll', () => {
-      if (scrollArea.scrollTop > 300) {
-        fab.style.opacity = "1";
-        fab.style.pointerEvents = "auto";
-        fab.style.visibility = "visible";
-      } else {
-        fab.style.opacity = "0";
-        fab.style.pointerEvents = "none";
-      }
-    });
-  }
+  wireToTopFab(page);
 
   setupNavButtons(page, songId, listName);
   setupFooterNav(page, songId, listName, songList);
+  setupJumpToSong(page, jumpTargetId);
   setupMenuButtons(page, songId, rec.first_line);
   gestureInit(verseList, page);
 
@@ -373,6 +365,29 @@ function setupFooterNav(page, songId, listName, songList) {
   }
 }
 
+function setupJumpToSong(page, targetId) {
+  page.querySelectorAll('.jump-to-song-pill').forEach((el) => el.remove());
+  if (!targetId) return;
+
+  const rec = window.INDEX && window.INDEX[targetId];
+  if (!rec) return;
+
+  const pill = document.createElement('button');
+  pill.className = 'jump-to-song-pill';
+  const label = rec.title || rec.first_line || rec.file_name || targetId;
+  pill.innerHTML = `<b>Saltar a:</b> ${escapeHtml(label)}`;
+  pill.onclick = () => {
+    document.getElementById('navigator').pushPage('tmpl-songview', {
+      data: { songId: targetId }
+    });
+  };
+
+  const spacer = page.querySelector('#footerSpacer');
+  if (spacer && spacer.parentNode) {
+    spacer.parentNode.insertBefore(pill, spacer);
+  }
+}
+
 async function initPageState() {
   const initSetting = async (key, defaultValue) => {
     if (appState[key] === undefined) {
@@ -552,7 +567,9 @@ function gen_versePart(verseText, index) {
 }
 
 function render_verses(verseList, page, songId, song) {
-  const translation = (song.es_translation ? song.es_translation : song.en_translation) ? (song.es_translation || song.en_translation).split('\n\n') : null;
+  const rawTranslation = song.es_translation || song.en_translation;
+  const cleanedTranslation = rawTranslation ? rawTranslation.replace(/\{[^{}"]+\.json\}/g, '').trim() : rawTranslation;
+  const translation = cleanedTranslation ? cleanedTranslation.split('\n\n') : null;
   page.querySelector('#transAvail').innerText = translation ? '' : 'No translation available.';
 
   const fragment = document.createDocumentFragment();

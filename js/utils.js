@@ -77,6 +77,21 @@ function fitElementToPage(el) {
     if (available > 0) el.style.minHeight = available + 'px';
   });
 }
+
+/**
+ * Wires the common scroll-to-top FAB (#toTop): hidden by default,
+ * revealed once the page's own scroll host passes `threshold` pixels.
+ * Replaces the identical block previously duplicated in every page init.
+ */
+function wireToTopFab(page, threshold = 600) {
+  const scrollArea = page.querySelector('.page__content');
+  const fab = page.querySelector('#toTop');
+  if (!scrollArea || !fab) return;
+
+  scrollArea.addEventListener('scroll', () => {
+    fab.classList.toggle('fab-toTop--hidden', scrollArea.scrollTop <= threshold);
+  });
+}
  
 function debouncify(fn, wait) {
   wait = wait || 400;

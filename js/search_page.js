@@ -169,20 +169,7 @@ function search_page_init(page) {
   if (defaultImg) fitElementToPage(defaultImg);
  
   /* scroll-to-top FAB */
-  const scrollArea = page.querySelector(".page__content");
-  const fab = page.querySelector("#toTop");
-  if (scrollArea && fab) {
-    scrollArea.addEventListener('scroll', () => {
-      if (scrollArea.scrollTop > 300) {
-        fab.style.opacity = "1";
-        fab.style.pointerEvents = "auto";
-        fab.style.visibility = "visible";
-      } else {
-        fab.style.opacity = "0";
-        fab.style.pointerEvents = "none";
-      }
-    });
-  }
+  wireToTopFab(page);
 }
  
 /**
@@ -274,6 +261,7 @@ function search(query) {
     return {
       id: fileName,
       title: window.getSongTitle(fileName),
+      jsonTitle: (rec && rec.title) || '',
       author: (rec && rec.author) || ''
     };
   });
@@ -287,6 +275,7 @@ function gen_searchResultItem(item, onClick) {
     <div class="center search-result">
       ${item.author ? `<div class="search-result-author">${escapeHtml(item.author)}</div>` : ''}
       <div class="search-result-title">${escapeHtml(truncateWords(item.title, 7))}</div>
+      ${item.jsonTitle ? `<div class="search-result-jsontitle">${escapeHtml(item.jsonTitle)}</div>` : ''}
     </div>
   `;
   el.onclick = onClick;
@@ -328,7 +317,12 @@ function render_searchUI(page, query, clickHandler, listId, minLength) {
       const fallbackRec = window.INDEX[fallbackId];
       renderSearchResults(
         listElement,
-        [{ id: fallbackId, title: window.getSongTitle(fallbackId), author: (fallbackRec && fallbackRec.author) || '' }],
+        [{
+          id: fallbackId,
+          title: window.getSongTitle(fallbackId),
+          jsonTitle: (fallbackRec && fallbackRec.title) || '',
+          author: (fallbackRec && fallbackRec.author) || ''
+        }],
         clickHandler
       );
     }

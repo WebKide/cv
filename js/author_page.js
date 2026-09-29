@@ -11,25 +11,21 @@ function author_page_init(page) {
   container.innerHTML = '';
 
   const authorIntro = document.createElement('div');
-  authorIntro.className = 'glassy list-item__subtitle';
-  /* touch-action: manipulation prevents the browser from zooming on double-tap */
-  authorIntro.style.cssText = 'text-align:left; font-size:16px; padding:16px; margin:12px 6px; touch-action: manipulation;';
+  authorIntro.className = 'glassy list-item__subtitle guide-intro';
 
   const teaser = 'Una colección sin precedentes de poemas devocionales, oraciones y canciones en sánscrito, bengalí, hindi y brajbhasa, escritos por los <i>ācāryas Gauḍīya Vaiṣṇava</i>.';
 
   const rest = 'Compilado bajo la dirección de nuestro muy venerado <i>Gurudeva</i>, <i>oṁ viṣṇupāda paramahaṁsa parivrājakācārya aṣṭottara-śata Śrī Śrīmad Bhaktivedānta Nārāyaṇa Mahārāja</i>. <br/><br/>Los cantos devocionales de la tradición <i>Gauḍīya Vaiṣṇava</i> llegaron por primera vez al mundo occidental a través de la predicación de <i>Śrī Śrīmad A. C. Bhaktivedānta Swami Prabhupāda</i>, ācārya fundador de la Sociedad Internacional para la Conciencia de Kṛṣṇa. Él llevó las enseñanzas y la misión de <i>Śrī Caitanya Mahāprabhu</i> más allá de la India. La predicación de <i>Śrīla Prabhupāda</i> fue continuada posteriormente por <i>Śrīla Bhaktivedānta Nārāyaṇa Mahārāja</i>, quien viajó extensamente por todo Occidente y ayudó a introducir muchas más canciones devocionales tradicionales. <br/><br/><b>Śrī Gauḍīya Gīti-guccha</b>, publicado por primera vez por <i>Śrīla Bhakti Prajñāna Keśava Gosvāmī</i>, es una colección de poemas devocionales, oraciones y canciones que expresan la devoción pura que se encuentra en los corazones de los grandes <i>Vaiṣṇava ācāryas</i>, entre ellos <i>Śrīla Rūpa Gosvāmī</i>, <i>Śrīla Raghunātha dāsa Gosvāmī</i>, <i>Śrīla Kṛṣṇadāsa Kavirāja Gosvāmī</i>, <i>Śrīla Narottama Ṭhākura</i>, <i>Śrīla Locanadāsa Ṭhākura</i>, <i>Śrīla Bhaktivinoda Ṭhākura</i> y <i>Śrīla Bhakti Prajñāna Keśava Mahārāja</i>. <br/><br/>Al aprender y recitar regularmente estas oraciones bajo la guía de un <i>vaiṣṇava</i> consumado, uno no solo medita sobre las cualidades divinas de <i>Śrī Guru</i>, <i>Śrī Gaurāṅga-deva</i> y <i>Śrī Śrī Rādhā-Kṛṣṇa</i>, pero también puede comenzar a apreciar los estados de ánimo devocionales particulares expresados por sus exaltados autores. <br/><br/><i>El kīrtana</i>, al ser <i>bhagavat-priya</i> —especialmente querido por <i>Śrī Kṛṣṇa</i>—, es una de las formas más importantes de servicio devocional y no debe descuidarse.';
 
   authorIntro.innerHTML = `
-    <p style="margin:0 0 0.5em 0; color: var(--text-color);">${teaser}</p>
+    <p class="guide-teaser">${teaser}</p>
 
-    <div class="guide-rest"
-         style="max-height:0; overflow:hidden; transition:max-height 0.4s ease; padding-top:1em;">
-      <p style="margin:0; color:var(--text-color);">${rest}</p>
+    <div class="guide-rest" style="max-height:0;">
+      <p class="guide-rest-text">${rest}</p>
     </div>
 
-    <p class="guide-prompt"
-       style="margin:0.8em 0 0; opacity:.8; font-style:normal; font-size:0.85em; text-align:center; user-select:none; -webkit-user-select:none; color:var(--highlight-color);">
-      [PRESIONA DOS VECES PARA LEER]
+    <p class="guide-prompt">
+      [TOCA DOS VECES PARA LEER]
     </p>
   `;
 
@@ -41,10 +37,10 @@ function author_page_init(page) {
     isExpanded = !isExpanded;
     if (isExpanded) {
       restWrapper.style.maxHeight = restWrapper.scrollHeight + 'px';
-      promptEl.textContent = '[PRESIONA DOS VECES PARA CERRAR]';
+      promptEl.textContent = '[TOCA DOS VECES PARA CERRAR]';
     } else {
       restWrapper.style.maxHeight = '0px';
-      promptEl.textContent = '[PRESIONA DOS VECES PARA LEER MÁS]';
+      promptEl.textContent = '[TOCA DOS VECES PARA LEER MÁS]';
     }
   };
 
@@ -181,39 +177,23 @@ function author_page_init(page) {
       const label = song.first_line || song.file_name || 'Unknown';
       content.appendChild(gen_listItem(label, () => {
         showSongViewUI(song.file_name, null);
-      }));
+      }, song.title || ''));
     });
 
     container.appendChild(item);
   });
 
   /* ── scroll-to-top FAB wiring ── */
-  const scrollArea = page.querySelector(".page__content");
-  const fab = page.querySelector("#toTop");
-  if (scrollArea && fab) {
-    scrollArea.addEventListener('scroll', () => {
-      if (scrollArea.scrollTop > 300) {
-        fab.style.opacity = "1";
-        fab.style.pointerEvents = "auto";
-        fab.style.visibility = "visible";
-      } else {
-        fab.style.opacity = "0";
-        fab.style.pointerEvents = "none";
-      }
-    });
-  }
+  wireToTopFab(page);
 
   const authorFooter = document.createElement('div');
-  authorFooter.className = 'glassy list-item__subtitle';
-
-  authorFooter.style.cssText =
-    'text-align:left; font-size:16px; padding:16px; margin:12px 6px; touch-action:manipulation;';
+  authorFooter.className = 'glassy list-item__subtitle guide-intro';
 
   const footerMsg =
     '✦ Los <highlight>Autores</highlight> (autores) que aparecen aquí incluyen sus canciones y oraciones que se pueden expandir y están ordenadas alfabéticamente, lo que facilita encontrar una canción cuando sabes quién la compuso o con quién se asocia tradicionalmente. Los bhajans tradicionales de los que no se conoce al autor se agrupan bajo <i>Vaiṣṇava Anónimo</i>.';
 
   authorFooter.innerHTML = `
-    <p text-align:left; font-size:16; padding:16px; margin:12px 6px; touch-action: manipulation;>${footerMsg}</p>
+    <p class="guide-teaser">${footerMsg}</p>
   `;
 
   container.appendChild(authorFooter);

@@ -117,33 +117,17 @@ function gen_swipeableListItem(text, songId, onClick, onDelete) {
   const item = document.createElement('ons-list-item');
   item.setAttribute('tappable', '');
   item.className = 'recent-swipe-item';
-  item.style.cssText = 'position:relative; overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none;';
   item.dataset.songId = songId;
  
   item.innerHTML = `
-    <div class="left drag-handle" style="display:flex;align-items:center;justify-content:center;padding:0 8px;z-index:3;cursor:grab;touch-action:none;">
+    <div class="left drag-handle">
       <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="var(--sub-text-color)">
         <path d="M9 3.9c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2M15 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2M9 9.9c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m-6 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2"/>
       </svg>
     </div>
-    <div class="center" style="position:relative; z-index:2; background:inherit; transition:margin-right .25s ease; padding-right:16px;">${text}</div>
+    <div class="center recent-item-center">${text}</div>
     <div class="right recent-delete-btn"
-         style="
-           position:absolute;
-           right:0; top:0; bottom:0;
-           width:90px;
-           background:#c62828;
-           display:flex;
-           flex-direction:column;
-           align-items:center;
-           justify-content:space-between;
-           padding:12px 0;
-           z-index:1;
-           transform:translateX(100%);
-           transition:transform .25s ease;
-           color:#fff;
-           font-weight:400;
-           font-size:.65rem;">
+         style="transform:translateX(100%); transition:transform .25s ease;">
       <svg viewBox="0 0 24 24" width="32" height="32" fill="#fff" aria-hidden="true" focusable="false">
         <path d="M15 18v-2h4v2zm0-8V8h7v2zm0 4v-2h6v2zM3 8H2V6h4V4.5h4V6h4v2h-1v9c0 .6-.2 1-.6 1.4s-.8.6-1.4.6H5c-.6 0-1-.2-1.4-.6S3 17.6 3 17zm2 0v9h6V8zm0 0v9z"/>
       </svg>

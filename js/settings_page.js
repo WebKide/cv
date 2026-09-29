@@ -9,8 +9,8 @@ function settings_page_init(page) {
  
   /* ─── Theme ─── */
   const themeList = ons.createElement(`
-    <ons-list class="glassy" style="margin:15px 0;">
-      <ons-list-header modifier="material" style="text-align:center; opacity:.6; font-size:16px; font-weight:700; width:100%; margin-top:8px; color:var(--highlight-color);">Color de la Aplicación</ons-list-header>
+    <ons-list class="glassy settings-list">
+      <ons-list-header modifier="material" class="settings-list-header">Color de la Aplicación</ons-list-header>
     </ons-list>
   `);
  
@@ -64,15 +64,15 @@ function settings_page_init(page) {
  
   /* Footer */
   content.appendChild(ons.createElement(`
-    <ons-list-header style="text-transform:none; font-size:.85rem; background-image:none; text-align:center;">
+    <ons-list-header class="settings-footer-header">
       ✦ Si tienes preguntas, sugerencias o quieres reportar errores, ponte en contacto con: <a href="https://github.com/WebKide/vedaversity/tree/main">WebKide</a>
     </ons-list-header>
   `));
  
   /* ─── Font ─── */
   const fontList = ons.createElement(`
-    <ons-list class="glassy" style="margin:15px 0;">
-      <ons-list-header modifier="material" style="text-align:center; opacity:.6; font-size:16px; font-weight:700; width:100%; margin-top:8px; color:var(--highlight-color);">Estilo de Fuente</ons-list-header>
+    <ons-list class="glassy settings-list">
+      <ons-list-header modifier="material" class="settings-list-header">Estilo de Fuente</ons-list-header>
     </ons-list>
   `);
  
@@ -129,9 +129,7 @@ function settings_page_init(page) {
  
   fontList.appendChild(ons.createElement(`
     <ons-list>
-      <ons-list-header
-        modifier="material"
-        style="text-align:center; opacity:.6; font-size:16px; font-weight:700; width:100%; margin-top:8px;">
+      <ons-list-header modifier="material" class="settings-list-header">
         Texto de muestra
       </ons-list-header>
  
@@ -148,8 +146,8 @@ function settings_page_init(page) {
  
   /* ─── App Update ─── */
   const updateBlock = ons.createElement(`
-    <ons-list class="glassy" style="margin:15px 0;">
-      <ons-list-header modifier="material" style="text-align:center; opacity:.6; font-size:16px; font-weight:700; width:100%; margin-top:8px; color:var(--highlight-color);">Actualización</ons-list-header>
+    <ons-list class="glassy settings-list">
+      <ons-list-header modifier="material" class="settings-list-header">Actualización</ons-list-header>
       <ons-list-item id="forceUpdateBtn" tappable>
         <div class="left">
           <svg class="update-icon" viewBox="0 0 24 24" width="32" height="32" fill="var(--highlight-color)">
@@ -157,8 +155,8 @@ function settings_page_init(page) {
           </svg>
         </div>
         <div class="center">
-          <div class="update-title" style="font-weight:600;">Busca actualizaciones</div>
-          <div class="update-subtitle" style="font-size:0.8rem; opacity:0.7;">verificar manualmente si hay una nueva versión</div>
+          <div class="update-title">Busca actualizaciones</div>
+          <div class="update-subtitle">verificar manualmente si hay una nueva versión</div>
         </div>
       </ons-list-item>
     </ons-list>

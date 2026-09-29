@@ -79,9 +79,7 @@ function pronounce_page_init(page) {
   container.innerHTML = '';
 
   const guideIntro = document.createElement('div');
-  guideIntro.className = 'glassy list-item__subtitle';
-  /* touch-action: manipulation prevents the browser from zooming on double-tap */
-  guideIntro.style.cssText = 'text-align:left; font-size:16px; padding:16px; margin:12px 6px; touch-action: manipulation;';
+  guideIntro.className = 'glassy list-item__subtitle guide-intro';
 
   const teaser = 'A lo largo de los siglos, el sánscrito se ha escrito con diversos alfabetos. Sin embargo, el sistema de escritura más utilizado en toda la India se llama <i>devanāgarī</i> <highlight>(देवनागरी)</highlight>, que literalmente significa <b>“la escritura de la ciudad de los <i>devas</i>, o dioses”.</b>';
 
@@ -89,11 +87,11 @@ function pronounce_page_init(page) {
 
   /* Build DOM — NOTE: no display:none here. We use max-height:0 for the transition. */
   guideIntro.innerHTML = `
-    <p style="margin:0 0 0.5em 0; color: var(--text-color);">${teaser}</p>
-    <div class="guide-rest" style="max-height:0px; overflow:hidden; transition:max-height 0.4s ease;">
-      <p style="margin:0; color: var(--text-color);">${rest}</p>
+    <p class="guide-teaser">${teaser}</p>
+    <div class="guide-rest" style="max-height:0px;">
+      <p class="guide-rest-text">${rest}</p>
     </div>
-    <p class="guide-prompt" style="margin:0.8em 0 0 0; opacity:.8; font-style:bold; font-size:0.85em; text-align:center; user-select:none; -webkit-user-select:none; color: var(--highlight-color);">[PRESIONA DOS VECES PARA LEER]</p>
+    <p class="guide-prompt">[TOCA DOS VECES PARA LEER]</p>
   `;
 
   const restWrapper = guideIntro.querySelector('.guide-rest');
@@ -104,10 +102,10 @@ function pronounce_page_init(page) {
     isExpanded = !isExpanded;
     if (isExpanded) {
       restWrapper.style.maxHeight = restWrapper.scrollHeight + 'px';
-      promptEl.textContent = '[PRESIONA DOS VECES PARA CERRAR]';
+      promptEl.textContent = '[TOCA DOS VECES PARA CERRAR]';
     } else {
       restWrapper.style.maxHeight = '0px';
-      promptEl.textContent = '[PRESIONA DOS VECES PARA LEER]';
+      promptEl.textContent = '[TOCA DOS VECES PARA LEER]';
     }
   };
 
@@ -134,8 +132,7 @@ function pronounce_page_init(page) {
   PRONOUNCE_GUIDE.forEach(([script, roman, note]) => {
     const item = ons.createElement(`
       <ons-list-item modifier="nodivider">
-        <div class="left" 
-             style="font-size: 1.4rem; min-width: 28px; width: 32px; color: var(--highlight-color);">
+        <div class="left pronounce-script-cell">
           ${script}
         </div>
         <div class="center">
@@ -151,18 +148,5 @@ function pronounce_page_init(page) {
   });
 
   /* scroll-to-top FAB */
-  const scrollArea = page.querySelector(".page__content");
-  const fab = page.querySelector("#toTop");
-  if (scrollArea && fab) {
-    scrollArea.addEventListener('scroll', () => {
-      if (scrollArea.scrollTop > 300) {
-        fab.style.opacity = "1";
-        fab.style.pointerEvents = "auto";
-        fab.style.visibility = "visible";
-      } else {
-        fab.style.opacity = "0";
-        fab.style.pointerEvents = "none";
-      }
-    });
-  }
+  wireToTopFab(page);
 }

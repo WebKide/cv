@@ -21,6 +21,7 @@ function shell_page_init(page) {
  
     if (isHome) {
       render_recentListItems(page);
+      updateHomeImageSize();
     } else {
       render_customLists(page);
       render_tattvaLists(page);
@@ -41,18 +42,55 @@ function shell_page_init(page) {
   page.querySelector('#pronounceGuide').onclick = () => navEl.pushPage('tmpl-pronounce');
   page.querySelector('#settingsBtn').onclick = () => navEl.pushPage('tmpl-settings');
  
-  // --- Home image version caption tap ---
-  const imgWrap = page.querySelector('.home-image-wrap');
+  // --- Home logotype version caption tap (flip/reveal moved here) ---
+  const logoWrap = page.querySelector('.home-logo-wrap');
   let captionTimer;
-  if (imgWrap) {
-    imgWrap.addEventListener('click', () => {
-      imgWrap.classList.add('is-visible');
+  if (logoWrap) {
+    logoWrap.addEventListener('click', () => {
+      logoWrap.classList.add('is-visible');
       clearTimeout(captionTimer);
       captionTimer = setTimeout(() => {
-        console.log('Hiding caption...'); // Debug check
-        imgWrap.classList.remove('is-visible');
+        logoWrap.classList.remove('is-visible');
       }, 5200);
     });
+  }
+
+  // --- Home image: grows on scroll toward the bottom of the Home tab ---
+  const imageWrap = page.querySelector('.home-image-wrap');
+  const imageContainer = page.querySelector('#tab-home .default_img_container');
+  const scrollHost = page.querySelector('.page__content');
+
+  // The container's height is fixed to the FINAL (max) size up front, so
+  // total scrollHeight never changes as the image grows — no feedback
+  // loop, and no need to recompute a baseline. The image is bottom-
+  // anchored inside that reserved box (see CSS), so it grows upward,
+  // away from the fixed tabbar, instead of downward into it.
+  function reserveHomeImageSpace() {
+    if (!imageContainer || !scrollHost) return null;
+    const availableWidth = imageContainer.clientWidth - 32;
+    const availableHeight = scrollHost.clientHeight - 88 - 32;
+    const maxSize = Math.max(150, Math.min(availableWidth, availableHeight, 512));
+    imageContainer.style.height = maxSize + 'px';
+    return maxSize;
+  }
+
+  function updateHomeImageSize() {
+    if (!imageWrap || !imageContainer || !scrollHost || !btnHome.classList.contains('active')) return;
+
+    const maxSize = reserveHomeImageSpace();
+    if (maxSize === null) return;
+
+    const maxScroll = scrollHost.scrollHeight - scrollHost.clientHeight;
+    const progress = maxScroll > 0 ? Math.min(1, Math.max(0, scrollHost.scrollTop / maxScroll)) : 0;
+
+    const size = 150 + (maxSize - 150) * progress;
+    imageWrap.style.setProperty('--home-image-size', size + 'px');
+  }
+
+  if (scrollHost) {
+    scrollHost.addEventListener('scroll', updateHomeImageSize, { passive: true });
+    window.addEventListener('resize', updateHomeImageSize);
+    updateHomeImageSize();
   }
  
   // --- Lists tab wiring ---
@@ -90,31 +128,17 @@ function shell_page_init(page) {
   activateTab('home');
 }
  
-function gen_swipeableRecentItem(text, onClick, onDelete) {
+function gen_swipeableRecentItem(text, subtitle, onClick, onDelete) {
   const item = document.createElement('ons-list-item');
   item.setAttribute('tappable', '');
   item.className = 'recent-swipe-item';
-  item.style.cssText = 'position:relative; overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none;';
- 
   item.innerHTML = `
-    <div class="center" style="position:relative; z-index:2; background:inherit; transition:margin-right .25s ease; padding-right:16px;">${text}</div>
+    <div class="center recent-item-center">
+      <div class="list-item-title">${text}</div>
+      ${subtitle ? `<div class="list-item-author">${subtitle}</div>` : ''}
+    </div>
     <div class="right recent-delete-btn"
-         style="
-           position:absolute;
-           right:0; top:0; bottom:0;
-           width:90px;
-           background:#c62828;
-           display:flex;
-           flex-direction:column;
-           align-items:center;
-           justify-content:space-between;
-           padding:12px 0;
-           z-index:1;
-           transform:translateX(100%);
-           transition:transform .25s ease;
-           color:#fff;
-           font-weight:400;
-           font-size:.65rem;">
+         style="transform:translateX(100%); transition:transform .25s ease;">
  
       <svg viewBox="0 0 24 24"
            width="32"
@@ -235,7 +259,7 @@ function render_recentListItems(page) {
   container.innerHTML = '';
  
   appState.recents.forEach((entry) => {
-    let label, onClick;
+    let label, subtitle = '', onClick;
  
     if (entry.listName && appState.lists[entry.listName]) {
       const list = appState.lists[entry.listName];
@@ -245,12 +269,14 @@ function render_recentListItems(page) {
       onClick = () => showSongViewUI(entry.id, entry.listName);
     } else {
       label = window.getSongTitle(entry.id);
+      const rec = window.INDEX && window.INDEX[entry.id];
+      subtitle = (rec && rec.title) || '';
       onClick = () => showSongViewUI(entry.id, null);
     }
  
     if (!label) return;
  
-    const el = gen_swipeableRecentItem(label, onClick, () => {
+    const el = gen_swipeableRecentItem(label, subtitle, onClick, () => {
       removeFromRecents(entry.id, entry.listName || null);
       render_recentListItems(page);
       const title = window.getSongTitle(entry.id) || entry.id;

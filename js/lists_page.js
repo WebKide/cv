@@ -554,35 +554,33 @@ function render_tattvaLists(page) {
   const introSongs = [
     {
       title: 'maṅgalācaraṇa',
-      firstline: 'auspicious invocation',
+      firstline: 'invocación auspiciosa',
       file: '00.json'
     },
     {
-      title: 'victory roar',
+      title: 'rugido de victoria',
       firstline: 'jaya śrī śrī guru gaurāṅga',
       file: '0b.json'
     },
     {
       title: 'svasti-vācana',
-      firstline: 'prayer for auspiciousness',
+      firstline: 'oración para recibir abundancia',
       file: '0a.json'
     },
     {
       title: 'rādhā-kṛṣṇa-gaura-tattva',
-      firstline: 'yat kiṅkarīṣu bahuśaḥ khalu kāku vāṇī',
+      firstline: 'yat kiṅkarīṣu bahuśaḥ',
       file: 'ai.json'
     },
     {
       title: 'mahā-mantra',
-      firstline: 'hare kṛṣṇa hare kṛṣṇa kṛṣṇa kṛṣṇa hare hare',
+      firstline: 'hare kṛṣṇa hare kṛṣṇa',
       file: 'dp.json'
     }
   ];
 
   const introList = document.createElement('div');
-  introList.className = 'glassy';
-
-  introList.style.margin = '15px 0';
+  introList.className = 'glassy intro-songs-list';
 
   const svgIcon = `
     <div class="left">
@@ -785,9 +783,7 @@ function render_tattvaLists(page) {
   initSlideshow(slideshow);
 
   const warned = document.createElement('div');
-  warned.className = 'list-header--material';
-  warned.style.cssText =
-    'text-align:center; opacity:.6; font-size:16px; font-weight:700; width:100%; margin-top:8px; color:var(--highlight-color);';
+  warned.className = 'list-header--material gallery-info-header';
   warned.textContent = 'Info sobre esta sección';
 
   // Append to the actual container that exists in render_tattvaLists()
@@ -795,17 +791,13 @@ function render_tattvaLists(page) {
 
 
   const listsFooter = document.createElement('div');
-  listsFooter.className = 'glassy list-item__subtitle';
-
-  /* touch-action: manipulation prevents the browser from zooming on double-tap */
-  listsFooter.style.cssText =
-    'text-align:left; font-size:16px; padding:16px; margin:12px 6px; touch-action:manipulation;';
+  listsFooter.className = 'glassy list-item__subtitle guide-intro';
 
   const footerMsg =
     '✦ La sección <highlight>Crear una nueva lista</highlight> se almacena localmente y te permite crear y guardar listas personalizadas para vratas y otros eventos. Una vez que abres una canción de una lista, puedes ir pasando por las demás canciones de esa lista sin tener que buscarlas de nuevo. También puedes reordenar, agregar o eliminar canciones en cualquier momento. <br/>✦ La sección <highlight>Accesos rápidos</highlight> contiene canciones que se utilizan repetidamente a lo largo del día, sin importar la hora, la ocasión o el tipo de actividad devocional. Estas se han colocado al inicio de esta sección para un acceso rápido y conveniente. <br/>✦ Las canciones de las <highlight>Listas por Tattva</highlight> han sido seleccionadas y ordenadas de acuerdo con su tema devocional principal, con el objetivo de facilitar la navegación y el uso del cancionero en casa o en cualquier <i>Maṭha</i>. Las selecciones se basan principalmente en el <i>Śrī Gauḍīya Gīti-guccha</i>, junto con canciones que se encuentran en el repertorio tradicional de los templos del <i>Gauḍīya Maṭha</i> y canciones asociadas con momentos específicos del día. Las categorías están pensadas como una <b>organización devocional práctica</b> más que como una clasificación rígida. Algunas canciones expresan naturalmente más de un <i>tattva</i>, y en tales casos se han colocado de acuerdo con la forma en que se cantan en el <i>Gauḍīya Maṭha</i>. <br/>✦ La sección <highlight>Ārati y Pūjā</highlight> está organizada por separado según los tres momentos tradicionales de adoración, mientras que las secciones <i>Tattva</i> reúnen canciones según el estado de ánimo o la personalidad. Por lo tanto, la selección resultante es <b>una selección curada más que exhaustiva</b>: representa una colección práctica de canciones adecuadas para la meditación, el <i>bhajana</i> personal y el canto congregacional, al tiempo que conserva el carácter devocional del repertorio tradicional <i>Gauḍīya Vaiṣṇava</i>. <br/>✦ La sección <highlight>Galería Gauḍīya</highlight> contiene algunas fotografías y pinturas que sirven como ventanas al mundo espiritual.';
 
   listsFooter.innerHTML = `
-    <p text-align:left; font-size:16; padding:16px; margin:12px 6px; touch-action: manipulation;>${footerMsg}</p>
+    <p class="guide-teaser">${footerMsg}</p>
   `;
 
 
