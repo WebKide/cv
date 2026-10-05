@@ -177,7 +177,61 @@ function settings_page_init(page) {
  
   updateBtn.addEventListener('click', async () => {
     if (updateBtn.classList.contains('is-working')) return;
- 
+
+    const cap = window.Capacitor;
+    const isNative = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+
+    if (isNative) {
+      updateBtn.classList.add('is-working');
+      uTitle.textContent = 'Actualizando índice';
+      uSub.textContent = 'descargando SO/IDX_db.json...';
+
+      try {
+        const cap = window.Capacitor;
+        const CapHttp = cap && cap.Plugins && cap.Plugins.CapacitorHttp;
+        const url = 'https://raw.githubusercontent.com/WebKide/cv/main/SO/IDX_db.json';
+
+        let jsonText;
+        if (CapHttp) {
+          const res = await CapHttp.get({ url });
+          if (res.status !== 200) throw new Error('HTTP status ' + res.status);
+          jsonText = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+        } else {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('HTTP status ' + res.status);
+          jsonText = await res.text();
+        }
+
+        const parsed = JSON.parse(jsonText);
+        if (!parsed.IDX) throw new Error('Formato de índice inválido');
+
+        localStorage.setItem('kirtan:IDX_db', jsonText);
+
+        window.INDEX = {};
+        parsed.IDX.forEach(item => {
+          if (item.file_name) {
+            window.INDEX[item.file_name] = item;
+          }
+        });
+
+        updateBtn.classList.remove('is-working');
+        updateBtn.classList.add('is-success');
+        uTitle.textContent = '¡Índice actualizado!';
+        uSub.textContent = 'SO/IDX_db.json actualizado con éxito';
+        uIcon.style.fill = '#4caf50';
+        setTimeout(resetUpdate, 3000);
+      } catch (err) {
+        console.error('[NativeUpdate]', err);
+        updateBtn.classList.remove('is-working');
+        updateBtn.classList.add('is-error');
+        uTitle.textContent = 'Actualización fallida';
+        uSub.textContent = 'comprueba tu conexión a internet';
+        uIcon.style.fill = '#f44336';
+        setTimeout(resetUpdate, 2500);
+      }
+      return;
+    }
+
     /* Second tap when update is ready → install & reload */
     if (updateBtn.classList.contains('is-success')) {
       const reg = await navigator.serviceWorker.getRegistration();
@@ -186,7 +240,7 @@ function settings_page_init(page) {
         return;
       }
     }
- 
+
     if (!('serviceWorker' in navigator)) {
       updateBtn.classList.add('is-error');
       uTitle.textContent = 'Actualización no disponible';
@@ -195,20 +249,20 @@ function settings_page_init(page) {
       setTimeout(resetUpdate, 2500);
       return;
     }
- 
+
     updateBtn.classList.add('is-working');
     uTitle.textContent = 'Buscando actualizaciones';
     uSub.textContent   = 'espera por favor';
- 
+
     try {
       const reg = await navigator.serviceWorker.getRegistration();
       if (!reg) throw new Error('no registration');
- 
+
       await reg.update();
       await new Promise(r => setTimeout(r, 800));
- 
+
       updateBtn.classList.remove('is-working');
- 
+
       if (reg.waiting) {
         updateBtn.classList.add('is-success');
         uTitle.textContent = 'Actualización lista';

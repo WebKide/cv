@@ -276,14 +276,34 @@ function setupMenuButtons(page, songId, songTitle) {
       const text = `${titleLine}\n${authorLine}\n\n${formattedVerses.replace(/⋅/g, '')}`;
 
       try {
-        if (navigator.share) {
+        const cap = window.Capacitor;
+        const native = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+        const CapShare = native && cap.Plugins && cap.Plugins.Share;
+        const CapClip = native && cap.Plugins && cap.Plugins.Clipboard;
+
+        const copyToClipboard = async () => {
+          if (CapClip) await CapClip.write({ string: text });
+          else await navigator.clipboard.writeText(text);
+          ons.notification.toast('✓ Copiado', { timeout: 1600 });
+        };
+
+        if (CapShare) {
+          try {
+            await CapShare.share({ title: songTitle, text: text, dialogTitle: songTitle });
+          } catch (err) {
+            // User dismissed the sheet: do nothing (no clipboard, no toast)
+            if (/cancel/i.test(String((err && err.message) || err))) return;
+            console.error('Capacitor Share falló, usando portapapeles:', err);
+            await copyToClipboard();
+          }
+        } else if (navigator.share) {
           await navigator.share({ title: songTitle, text: text });
-        } else if (navigator.clipboard) {
-          await navigator.clipboard.writeText(text);
-          ons.notification.toast('Copiado al portapapeles', { timeout: 1800 });
+        } else if (CapClip || navigator.clipboard) {
+          await copyToClipboard();
         }
       } catch (err) {
         console.error("No se pudo compartir:", err);
+        alert('DEBUG share error: ' + (err && err.message || err));
       }
     });
   }
@@ -613,9 +633,9 @@ function selectListDialog(songId) {
     cancelable: true,
     placeholder: 'Agregar a la lista',
     messageHTML: `
-      <div class="dialog-label">${listNames.length > 0 ? 'Selecciona una lista:' : ''}</div>
-      <ons-list id="dialogList" class="glassy dialog-list"></ons-list>
-      <div class="dialog-label">${listNames.length > 0 ? 'O crea una nueva:' : 'Crear una nueva lista:'}</div>
+      <div class="alert-dialog-label">${listNames.length > 0 ? 'Selecciona una lista:' : ''}</div>
+      <ons-list id="dialogList" class="glassy alert-dialog-list"></ons-list>
+      <div class="alert-dialog-label">${listNames.length > 0 ? 'O crea una nueva:' : 'Crear una nueva lista:'}</div>
     `,
     autofocus: listNames.length === 0
   };

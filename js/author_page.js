@@ -190,7 +190,7 @@ function author_page_init(page) {
   authorFooter.className = 'glassy list-item__subtitle guide-intro';
 
   const footerMsg =
-    '✦ Los <highlight>Autores</highlight> (autores) que aparecen aquí incluyen sus canciones y oraciones que se pueden expandir y están ordenadas alfabéticamente, lo que facilita encontrar una canción cuando sabes quién la compuso o con quién se asocia tradicionalmente. Los bhajans tradicionales de los que no se conoce al autor se agrupan bajo <i>Vaiṣṇava Anónimo</i>.';
+    '✦ Cada <highlight>Autor</highlight> incluye todas sus canciones y oraciones disponibles, organizadas alfabéticamente. Para encontrar una canción toda el nombre correspondiente. Los bhajans tradicionales de los que no se conoce el autor se agrupan bajo <i>Vaiṣṇava Anónimo</i>.';
 
   authorFooter.innerHTML = `
     <p class="guide-teaser">${footerMsg}</p>

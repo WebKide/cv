@@ -138,25 +138,37 @@ window.IDX_SEARCHBLOB  = 2;  // "hegovindahegopalakesavamadhava...."
 window.IDX_FIRSTLINE   = 3;  // "he govinda he gopāla"
 window.IDX_FILE        = 4;  // "5G.json"*/
  
-window.indexPromise = fetch('SO/IDX_db.json')
-  .then((r) => r.json())
-  .then((data) => {
-    const list = data.IDX || [];
-    // Convert array to a Map/Object for easy lookup by file_name
-    window.INDEX = {};
-    list.forEach(item => {
-      if (item.file_name) {
-        window.INDEX[item.file_name] = item;
-      }
-    });
-    return window.INDEX;
-  })
-  .catch((err) => {
-    console.error('No se pudo cargar el índice de canciones (SO/IDX_db.json):', err);
-    window.INDEX = {};
-    return {};
+window.indexPromise = (async () => {
+  let data = null;
+  try {
+    const cached = localStorage.getItem('kirtan:IDX_db');
+    if (cached) {
+      data = JSON.parse(cached);
+    }
+  } catch (e) {
+    console.error('Failed to load cached IDX_db from storage:', e);
+  }
+
+  if (!data) {
+    try {
+      const r = await fetch('SO/IDX_db.json');
+      data = await r.json();
+    } catch (err) {
+      console.error('No se pudo cargar el índice de canciones (SO/IDX_db.json):', err);
+      data = { IDX: [] };
+    }
+  }
+
+  const list = data.IDX || [];
+  window.INDEX = {};
+  list.forEach(item => {
+    if (item.file_name) {
+      window.INDEX[item.file_name] = item;
+    }
   });
- 
+  return window.INDEX;
+})();
+
 window.getSongTitle = function (id) {
   const rec = window.INDEX && window.INDEX[id];
   // Access the named property 'first_line' from the object
@@ -206,3 +218,59 @@ document.addEventListener('contextmenu', (e) => {
     e.preventDefault();
   }
 });
+
+// ---------------------------------------------------------------------
+// Android hardware Back (Capacitor only)
+// router.js depth: Home = 1 (resetToPage replaces then pushes), so
+// depth > 1 means there is SPA history to go back through.
+// ---------------------------------------------------------------------
+
+(function () {
+  const cap = window.Capacitor;
+  if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+  const CapApp = cap.Plugins && cap.Plugins.App;
+
+  let exitArmed = false;
+  let exitTimer = null;
+  let lastBackPressTime = 0;
+
+  document.addEventListener('backbutton', (e) => {
+    const now = Date.now();
+    if (now - lastBackPressTime < 300) {
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
+    lastBackPressTime = now;
+
+    const nav = document.getElementById('navigator');
+    const stackLen = nav && typeof nav.stackLength === 'number' ? nav.stackLength : 1;
+
+    // If there is history in the app stack, go back one screen.
+    if (stackLen > 1) {
+      e.stopPropagation();
+      e.preventDefault();
+      nav.popPage();
+      return;
+    }
+
+    // Root: double-back to exit.
+    if (exitArmed) {
+      e.stopPropagation();
+      e.preventDefault();
+      clearTimeout(exitTimer);
+      if (CapApp && typeof CapApp.exitApp === 'function') {
+        CapApp.exitApp();
+      } else {
+        navigator.app && navigator.app.exitApp && navigator.app.exitApp();
+      }
+      return;
+    }
+
+    e.stopPropagation();
+    e.preventDefault();
+    exitArmed = true;
+    ons.notification.toast('Presiona atrás otra vez para salir', { timeout: 2000 });
+    exitTimer = setTimeout(() => { exitArmed = false; }, 2000);
+  }, true); // Use capture phase to intercept before Onsen UI or other library listeners
+})();

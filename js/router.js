@@ -119,6 +119,10 @@
     get topPage() {
       const top = stack[stack.length - 1];
       return top ? top.el : null;
+    },
+
+    get stackLength() {
+      return stack.length;
     }
   };
 
@@ -139,4 +143,5 @@
   const navEl = document.getElementById('navigator');
   Object.assign(navEl, api);
   Object.defineProperty(navEl, 'topPage', { get: () => api.topPage });
+  Object.defineProperty(navEl, 'stackLength', { get: () => api.stackLength });
 })();
