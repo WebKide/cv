@@ -5,7 +5,7 @@
 
 'use strict';
 
-const VERSION = 'v2.05';
+const VERSION = 'v2.14';
 const CACHE = `cancionero-${VERSION}`;
 
 const BASE = self.location.pathname.substring(
@@ -76,7 +76,7 @@ const ASSETS = [
   BASE + '/img/slideshow/009.jpg',
   BASE + '/img/slideshow/010.jpg',
   BASE + '/js/dependencies/fuse.min.js',
-  BASE + '/js/dependencies/offline-onsenui.js',
+  BASE + '/js/dependencies/offline-onsenui.min.js',
   BASE + '/js/dependencies/Sortable.min.js',
   BASE + '/js/all_songs_page.js',
   BASE + '/js/app.js',
@@ -156,7 +156,7 @@ self.addEventListener('message', event => {
 });
 
 self.addEventListener('fetch', event => {
-  console.log('[SW fetch]', event.request.mode, event.request.url);
+  // console.log('[SW fetch]', event.request.mode, event.request.url);
 
   const request = event.request;
 
@@ -170,11 +170,18 @@ self.addEventListener('fetch', event => {
 
     const cache = await caches.open(CACHE);
 
+    /* =========================================================
     // SPA routing.
     if (request.mode === 'navigate') {
       // return await cache.match(`${BASE}/index.html`);
       const page = await cache.match(`${BASE}/index.html`);
       return page || fetch(request);
+    }
+    ========================================================= */
+
+    if (request.mode === 'navigate') {  // Only handle navigation requests (i.e. requests for an HTML page)
+      const page = await cache.match(`${BASE}/index.html`);  // Try to retrieve the cached index.html from the service-worker cache
+      return page || fetch(request);  // Return the cached page if available; otherwise fetch the page from the network
     }
 
     // Cache-first for everything else.

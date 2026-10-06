@@ -492,6 +492,16 @@ ons-list-item .ripple__background {
   background: rgba(189, 189, 189, 0.3);
 }
 
+/* Disable the white ripple effect and use highlight color on active press */
+ons-ripple {
+  display: none !important;
+}
+
+.list-item:active,
+ons-list-item:active {
+  background-color: color-mix(in srgb, var(--highlight-color) 22%, transparent) !important;
+}
+
 ons-toolbar {
   position: relative;
 }
@@ -1382,6 +1392,9 @@ ons-list-item .list-item__subtitle span.no_right {
 .recents-scroll {
   max-height: 260px;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 #recents-items { overflow-x: hidden; }

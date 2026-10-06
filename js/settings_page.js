@@ -2,29 +2,29 @@
  * js/settings_page.js
  * Theme (dark default / light opt-in / system), and a contact footer.
  */
- 
+
 function settings_page_init(page) {
   const content = page.querySelector('.gutter');
   content.innerHTML = '';
- 
+
   /* ─── Theme ─── */
   const themeList = ons.createElement(`
     <ons-list class="glassy settings-list">
       <ons-list-header modifier="material" class="settings-list-header">Color de la Aplicación</ons-list-header>
     </ons-list>
   `);
- 
+
   const themes = [
     { mode: 'system', label: 'Configuración predeterminada del sistema' },
     { mode: 'light', label: 'Aruṇa (Claro)' },
     { mode: 'dark', label: 'Śyāma (Oscuro)' }
   ];
- 
+
   let activeThemeSwitch = null;
- 
+
   themes.forEach((theme) => {
     const isChecked = (appState.themeMode || 'system') === theme.mode;
- 
+
     const item = ons.createElement(`
       <ons-list-item tappable>
         <div class="center">${theme.label}</div>
@@ -33,10 +33,10 @@ function settings_page_init(page) {
         </div>
       </ons-list-item>
     `);
- 
+
     const sw = item.querySelector('ons-switch');
     if (isChecked) activeThemeSwitch = sw;
- 
+
     sw.addEventListener('change', (e) => {
       // Prevent unchecking the already-selected option
       if (!e.target.checked) {
@@ -45,37 +45,37 @@ function settings_page_init(page) {
         }
         return;
       }
- 
+
       // Uncheck previous
       if (activeThemeSwitch && activeThemeSwitch !== e.target) {
         activeThemeSwitch.checked = false;
       }
       activeThemeSwitch = e.target;
- 
+
       appState.themeMode = theme.mode;
       dbSetItem('themeMode', theme.mode);
       apply_theme();
     });
- 
+
     themeList.appendChild(item);
   });
- 
+
   content.appendChild(themeList);
- 
+
   /* Footer */
   content.appendChild(ons.createElement(`
     <ons-list-header class="settings-footer-header">
       ✦ Si tienes preguntas, sugerencias o quieres reportar errores, ponte en contacto con: <a href="https://github.com/WebKide/vedaversity/tree/main">WebKide</a>
     </ons-list-header>
   `));
- 
+
   /* ─── Font ─── */
   const fontList = ons.createElement(`
     <ons-list class="glassy settings-list">
       <ons-list-header modifier="material" class="settings-list-header">Estilo de Fuente</ons-list-header>
     </ons-list>
   `);
- 
+
   const fonts = [
     { value: "'Kelvinch', serif",          label: 'Kelvinch (Tradicional)' },
     { value: "'Ubuntu', sans-serif",       label: 'Ubuntu (Moderno)' },
@@ -86,12 +86,12 @@ function settings_page_init(page) {
     { value: "'Libre Baskerville', serif", label: 'Baskerville (Formal)' },
     { value: "'Sansita', sans-serif",      label: 'Sansita (Expresivo)' }
   ];
- 
+
   let activeFontSwitch = null;
- 
+
   fonts.forEach((font) => {
     const isChecked = appState.fontFamily === font.value;
- 
+
     const item = ons.createElement(`
       <ons-list-item tappable>
         <div class="center" style="font-family: ${font.value}">${font.label}</div>
@@ -100,10 +100,10 @@ function settings_page_init(page) {
         </div>
       </ons-list-item>
     `);
- 
+
     const sw = item.querySelector('ons-switch');
     if (isChecked) activeFontSwitch = sw;
- 
+
     sw.addEventListener('change', (e) => {
       // Prevent unchecking the already-selected option
       if (!e.target.checked) {
@@ -112,27 +112,27 @@ function settings_page_init(page) {
         }
         return;
       }
- 
+
       // Uncheck previous
       if (activeFontSwitch && activeFontSwitch !== e.target) {
         activeFontSwitch.checked = false;
       }
       activeFontSwitch = e.target;
- 
+
       appState.fontFamily = font.value;
       dbSetItem('fontFamily', font.value);
       apply_font();
     });
- 
+
     fontList.appendChild(item);
   });
- 
+
   fontList.appendChild(ons.createElement(`
     <ons-list>
       <ons-list-header modifier="material" class="settings-list-header">
         Texto de muestra
       </ons-list-header>
- 
+
       <ons-list-header class="sample-text">
         khaḍgaḥ śāntaṁ jñānaṁ dadāti ।<br />
         gaṅgāyāṁ ṛṣiḥ kuṇḍe tiṣṭhati ।<br />
@@ -141,9 +141,9 @@ function settings_page_init(page) {
       </ons-list-header>
     </ons-list>
   `));
- 
+
   content.appendChild(fontList);
- 
+
   /* ─── App Update ─── */
   const updateBlock = ons.createElement(`
     <ons-list class="glassy settings-list">
@@ -162,19 +162,19 @@ function settings_page_init(page) {
     </ons-list>
   `);
   content.appendChild(updateBlock);
- 
+
   const updateBtn = updateBlock.querySelector('#forceUpdateBtn');
   const uTitle    = updateBtn.querySelector('.update-title');
   const uSub      = updateBtn.querySelector('.update-subtitle');
   const uIcon     = updateBtn.querySelector('.update-icon');
- 
+
   const resetUpdate = () => {
     updateBtn.classList.remove('is-working', 'is-success', 'is-error');
     uTitle.textContent = 'Busca actualizaciones';
     uSub.textContent   = 'verificar manualmente si hay una nueva versión';
     uIcon.style.fill   = 'var(--highlight-color)';
   };
- 
+
   updateBtn.addEventListener('click', async () => {
     if (updateBtn.classList.contains('is-working')) return;
 
@@ -187,7 +187,6 @@ function settings_page_init(page) {
       uSub.textContent = 'descargando SO/IDX_db.json...';
 
       try {
-        const cap = window.Capacitor;
         const CapHttp = cap && cap.Plugins && cap.Plugins.CapacitorHttp;
         const url = 'https://raw.githubusercontent.com/WebKide/cv/main/SO/IDX_db.json';
 

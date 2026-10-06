@@ -2,23 +2,23 @@
  * js/app.js
  * Global app state, persistence, song index loading, theme, and boot sequence.
  */
- 
+
 // ---------------------------------------------------------------------
 // Global state
 // ---------------------------------------------------------------------
- 
+
 window.songCache = {}; // in-memory cache
- 
+
 window.getSongById = async function(id) {
   return (window.INDEX && window.INDEX[id]) || null;
 };
- 
+
 // ---------------------------------------------------------------------
 // localStorage-backed key/value store
 // ---------------------------------------------------------------------
- 
+
 const DB_PREFIX = 'kirtan:';
- 
+
 async function dbGetItem(key) {
   try {
     const raw = localStorage.getItem(DB_PREFIX + key);
@@ -28,7 +28,7 @@ async function dbGetItem(key) {
     return null;
   }
 }
- 
+
 async function dbSetItem(key, value) {
   try {
     localStorage.setItem(DB_PREFIX + key, JSON.stringify(value));
@@ -38,7 +38,7 @@ async function dbSetItem(key, value) {
     return false;
   }
 }
- 
+
 // Clear all recent items
 window.clearRecents = async function() {
   const confirmed = await ons.notification.confirm({
@@ -47,27 +47,27 @@ window.clearRecents = async function() {
     buttonLabels: ['Cancelar', 'Eliminar'],
     primaryButtonIndex: 1
   });
- 
+
   if (confirmed === 1) { // 1 corresponds to 'Clear' (index 1 in buttonLabels)
     appState.recents = [];
     await dbSetItem('recents', []);
- 
+
     // Refresh the UI
     if (typeof renderRecents === 'function') {
       renderRecents();
     }
- 
+
     ons.notification.toast('Historial vaciado', { timeout: 2000 });
   }
 };
- 
+
 // Create a new list and clear recents
 window.createListFromRecents = async function() {
   if (appState.recents.length === 0) {
     ons.notification.alert("No hay canciones recientes para crear una lista.");
     return;
   }
- 
+
   const listName = await ons.notification.prompt({
     title: 'Nueva Lista',
     message: 'Nombra tu nueva lista:',
@@ -76,26 +76,26 @@ window.createListFromRecents = async function() {
     primaryButtonIndex: 1,  // Makes 'Create' the bold/primary choice
     cancelable: true        // Allows closing by tapping outside
   });
- 
+
   // Important: When there are two buttons, listName will be null if 'Cancel' is pressed
   if (listName === null || listName === undefined) {
     return; // User cancelled
   }
- 
+
   if (listName) {
     // Save to lists
     appState.lists[listName] = appState.recents.map(item => item.id);
     await dbSetItem('lists', appState.lists);
- 
+
     // Clear history
     appState.recents = [];
     await dbSetItem('recents', []);
- 
+
     ons.notification.toast(`Lista “${listName}” creada!`, { timeout: 2000 });
     if (typeof renderRecents === 'function') renderRecents();
   }
 };
- 
+
 window.appState = {
   lists: {},
   recents: [],
@@ -106,7 +106,7 @@ window.appState = {
   trans: false,
   deviceInfo: null
 };
- 
+
 async function loadPersistedState() {
   const [lists, recents, langCode, themeMode, zoomSize, trans, fontFamily] = await Promise.all([
     dbGetItem('lists'),
@@ -117,7 +117,7 @@ async function loadPersistedState() {
     dbGetItem('trans'),
     dbGetItem('fontFamily')
   ]);
- 
+
   if (lists) appState.lists = lists;
   if (recents) appState.recents = recents;
   if (langCode) appState.langCode = langCode;
@@ -126,7 +126,7 @@ async function loadPersistedState() {
   if (trans !== null && trans !== undefined) appState.trans = trans;
   if (fontFamily) appState.fontFamily = fontFamily;
 }
- 
+
 // ---------------------------------------------------------------------
 // Song index
 // window.INDEX[i] = [title, slug, searchBlob, firstLineRomanized, filename]
@@ -137,7 +137,12 @@ window.IDX_TITLE_NORM  = 1;  // "hegovindahegopala"
 window.IDX_SEARCHBLOB  = 2;  // "hegovindahegopalakesavamadhava...."
 window.IDX_FIRSTLINE   = 3;  // "he govinda he gopāla"
 window.IDX_FILE        = 4;  // "5G.json"*/
- 
+
+// ---------------------------------------------------------------------
+// Song index
+// window.INDEX[i] = [title, slug, searchBlob, firstLineRomanized, filename]
+// ---------------------------------------------------------------------
+
 window.indexPromise = (async () => {
   let data = null;
   try {
@@ -160,6 +165,7 @@ window.indexPromise = (async () => {
   }
 
   const list = data.IDX || [];
+  // Convert array to a Map/Object for easy lookup by file_name
   window.INDEX = {};
   list.forEach(item => {
     if (item.file_name) {
@@ -178,7 +184,7 @@ window.getSongTitle = function (id) {
 // ---------------------------------------------------------------------
 // Theme
 // ---------------------------------------------------------------------
- 
+
 function apply_theme() {
   const mode = appState.themeMode; // 'dark' | 'light' | 'system'
   let effective = mode === 'system' ? null : mode;
@@ -187,30 +193,47 @@ function apply_theme() {
   }
   document.documentElement.classList.remove('theme-light', 'theme-dark');
   document.documentElement.classList.add('theme-' + effective);
- 
+
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', effective === 'light' ? '#ffffff' : '#0d0d0d');
 }
- 
+
 if (window.matchMedia) {
   const mq = window.matchMedia('(prefers-color-scheme: light)');
   const onChange = () => { if (appState.themeMode === 'system') apply_theme(); };
   if (mq.addEventListener) mq.addEventListener('change', onChange);
   else if (mq.addListener) mq.addListener(onChange); // older Safari
 }
- 
+
+function updateAppVersionDisplay() {
+  try {
+    const title = document.title;
+    const match = title.match(/v\d+\.\d+(?:\.\d+)?/);
+    if (match) {
+      const versionStr = match[0];
+      const captionEl = document.getElementById('appVersionCaption');
+      if (captionEl) {
+        captionEl.textContent = 'Cancionero ' + versionStr;
+      }
+    }
+  } catch (e) {
+    console.error('updateAppVersionDisplay failed:', e);
+  }
+}
+
 // ---------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------
- 
+
 async function boot() {
   await loadPersistedState();
   apply_theme();
   apply_font();
   await window.indexPromise;
   document.getElementById('navigator').resetToPage('tmpl-shell');
+  updateAppVersionDisplay();
 }
- 
+
 document.addEventListener('DOMContentLoaded', boot);
 
 document.addEventListener('contextmenu', (e) => {
