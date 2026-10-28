@@ -5,7 +5,7 @@
 
 'use strict';
 
-const VERSION = 'v2.14';
+const VERSION = 'v2.15';
 const CACHE = `cancionero-${VERSION}`;
 
 const BASE = self.location.pathname.substring(
@@ -17,8 +17,8 @@ const ASSETS = [
   BASE + '/index.html',
   BASE + '/site.webmanifest',
   BASE + '/favicon.ico',
-  BASE + '/css/dependencies/offline-onsenui.css',
   BASE + '/css/fonts.css',
+  BASE + '/css/styles.css',
   BASE + '/fonts/CharisSIL-Italic.woff2',
   BASE + '/fonts/CharisSIL-Regular.woff2',
   BASE + '/fonts/CharisSIL-BoldItalic.woff2',
@@ -86,6 +86,7 @@ const ASSETS = [
   BASE + '/js/lists_page.js',
   BASE + '/js/pronounce_page.js',
   BASE + '/js/router.js',
+  BASE + '/js/utils.js',
   BASE + '/js/search_page.js',
   BASE + '/js/settings_page.js',
   BASE + '/js/songView_page.js',
@@ -108,7 +109,7 @@ self.addEventListener('install', event => {
           await cache.put(url, response);
       }
     } catch (err) {
-      const clients = await self.clients.matchAll();
+      const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
       for (const client of clients) {
         client.postMessage({
           type: 'SW_INSTALL_FAILED',

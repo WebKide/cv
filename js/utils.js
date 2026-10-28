@@ -110,20 +110,27 @@ function alertError(err) {
  
 // Screen Wake Lock (web standard) replaces the old native keepAwake/allowSleep
 let _wakeLock = null;
+let _wantAwake = false;
+document.addEventListener('visibilitychange', () => {
+  if (_wantAwake && document.visibilityState === 'visible') keepAwake();
+});
 async function keepAwake() {
+  _wantAwake = true;
   try {
-    if ('wakeLock' in navigator) _wakeLock = await navigator.wakeLock.request('screen');
+    if (!('wakeLock' in navigator)) return;
+    if (_wakeLock && !_wakeLock.released) return;
+    const lock = await navigator.wakeLock.request('screen');
+    if (!_wantAwake) { lock.release().catch(() => {}); return; }
+    _wakeLock = lock;
   } catch (e) {
-    /* not fatal — just means the screen may sleep during long songs */
+    /* not fatal */
   }
 }
 async function allowSleep() {
-  try {
-    if (_wakeLock) await _wakeLock.release();
-  } catch (e) {
-    /* ignore */
-  }
+  _wantAwake = false;
+  const lock = _wakeLock;
   _wakeLock = null;
+  try { if (lock) await lock.release(); } catch (e) { /* ignore */ }
 }
  
 // ---------------------------------------------------------------------

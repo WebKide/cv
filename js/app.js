@@ -84,7 +84,8 @@ window.createListFromRecents = async function() {
 
   if (listName) {
     // Save to lists
-    appState.lists[listName] = appState.recents.map(item => item.id);
+    const ids = [...new Set(appState.recents.map(item => item.id))];
+    appState.lists[listName] = [...new Set([...(appState.lists[listName] || []), ...ids])];
     await dbSetItem('lists', appState.lists);
 
     // Clear history
@@ -147,7 +148,9 @@ window.indexPromise = (async () => {
   let data = null;
   try {
     const cached = localStorage.getItem('kirtan:IDX_db');
-    if (cached) {
+    const appVer = (document.title.match(/v\d+\.\d+(?:\.\d+)?/) || [''])[0];
+    // ignore a downloaded index saved by an older app version
+    if (cached && localStorage.getItem('kirtan:IDX_db_ver') === appVer) {
       data = JSON.parse(cached);
     }
   } catch (e) {

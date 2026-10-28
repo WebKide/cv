@@ -41,7 +41,10 @@
   function applyVisibility() {
     stack.forEach((entry, i) => {
       const isTop = i === stack.length - 1;
+      const sc = entry.el.querySelector('.page__content');
+      if (!isTop && entry.el.style.display !== 'none' && sc) entry._scroll = sc.scrollTop;
       entry.el.style.display = isTop ? '' : 'none';
+      if (isTop && sc && entry._scroll) sc.scrollTop = entry._scroll;
     });
   }
 

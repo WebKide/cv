@@ -3,11 +3,24 @@
  * Song view: loads /SO/<filename>.json directly (no fflate decompression —
  * data is plain JSON now), renders verses + translation, handles
  * double-tap-to-toggle-translation, pinch-to-zoom (persisted), swipe/
- * pagination between songs when opened from a list, and add-to-list /
- * copy-share from the toolbar menu.
+ * pagination between songs when opened from a list, add-to-list /
+ * long-press to copy single verse+translation to clipboard /
+ * copy-share full song from the toolbar menu.
  */
 
 const songDataCache = {};
+
+window.legacyCopy = function (text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;user-select:text;-webkit-user-select:text;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+  if (!ok) throw new Error('copy failed');
+};
 
 window.escapeHtml = function(str) {
   const p = document.createElement('p');
@@ -147,7 +160,10 @@ async function songView_page_init(page) {
   // 7. Lifecycle & Analytics
   // (recents are already recorded by showSongViewUI -> addToRecents)
 
-  page.onShow = (typeof keepAwake === 'function') ? keepAwake : null;
+  if (typeof keepAwake === 'function') {
+    keepAwake();
+    page.onShow = keepAwake;
+  }
 
   const _origOnHide = (typeof allowSleep === 'function') ? allowSleep : null;
   page.onHide = () => {
@@ -270,7 +286,10 @@ function setupMenuButtons(page, songId, songTitle) {
       let formattedVerses = song.verses;
 
       // 2. Replace tags (<b>, <highlight>, <i>, <em>) and their closing counterparts with '*'
-      formattedVerses = formattedVerses.replace(/<\/?(b|highlight|i|em|mark)>/gi, '*');
+      formattedVerses = formattedVerses
+        .replace(/<\/?(b|highlight|i|em|mark)>/gi, '*')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '');
 
       // 3. Remove the special dot character and construct final text
       const text = `${titleLine}\n${authorLine}\n\n${formattedVerses.replace(/⋅/g, '')}`;
@@ -282,8 +301,12 @@ function setupMenuButtons(page, songId, songTitle) {
         const CapClip = native && cap.Plugins && cap.Plugins.Clipboard;
 
         const copyToClipboard = async () => {
-          if (CapClip) await CapClip.write({ string: text });
-          else await navigator.clipboard.writeText(text);
+          try {
+            if (!CapClip) throw new Error('no native clipboard');
+            await CapClip.write({ string: text });
+          } catch (e) {
+            try { await navigator.clipboard.writeText(text); } catch (e2) { legacyCopy(text); }
+          }
           ons.notification.toast('✓ Copiado', { timeout: 1600 });
         };
 
@@ -297,13 +320,18 @@ function setupMenuButtons(page, songId, songTitle) {
             await copyToClipboard();
           }
         } else if (navigator.share) {
-          await navigator.share({ title: songTitle, text: text });
-        } else if (CapClip || navigator.clipboard) {
+          try {
+            await navigator.share({ title: songTitle, text: text });
+          } catch (err) {
+            if (err && err.name === 'AbortError') return; // user closed the sheet
+            await copyToClipboard();
+          }
+        } else {
           await copyToClipboard();
         }
       } catch (err) {
         console.error("No se pudo compartir:", err);
-        alert('DEBUG share error: ' + (err && err.message || err));
+        ons.notification.toast('No se pudo compartir: ' + ((err && err.message) || err), { timeout: 5000 });
       }
     });
   }
@@ -441,11 +469,7 @@ function gestureInit(verseList, page) {
     if (isPinching) return;
     event.gesture.preventDefault();
 
-    const distance =
-      event.gesture.distance *
-      (event.gesture.direction === 'down' ? -1 : 1);
-
-    pageContent.scrollTop = startScrollTop + distance;
+    pageContent.scrollTop = startScrollTop - event.gesture.deltaY;
   });
 
   // Swipe left/right navigates to next/prev song
@@ -610,6 +634,84 @@ function render_verses(verseList, page, songId, song) {
         <div class="expandable-content trans-container">${transText}</div>
       </ons-list-item>
     `);
+
+    // Long press (touch hold / right-click) copies verse, translation, and index (index + 1)
+    let lastCopy = 0;
+    const copyVerse = async () => {
+      if (Date.now() - lastCopy < 1500) return; // timer + contextmenu can both fire
+      lastCopy = Date.now();
+      const rawVerse = verse
+        .replace(/<\/?(b|highlight|i|em|mark)>/gi, '*')
+        .replace(/<[^>]+>/g, '')
+        .replace(/⋅/g, '');
+      const transEl = item.querySelector('.trans-container');
+      const rawTrans = transEl ? transEl.textContent.trim() : '';
+
+      const clipboardText = `${rawVerse}${rawTrans ? '\n\n' + rawTrans : ''} (${index + 1})`;
+
+      try {
+        const cap = window.Capacitor;
+        const native = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+        const CapClip = native && cap.Plugins && cap.Plugins.Clipboard;
+
+        let nativeOk = false;
+        if (CapClip) {
+          try {
+            await CapClip.write({ string: clipboardText });
+            nativeOk = true;
+          } catch (e) {
+            console.error('Clipboard plugin falló:', e);
+          }
+        }
+        if (!nativeOk) {
+          try {
+            await navigator.clipboard.writeText(clipboardText);
+          } catch (e) {
+            legacyCopy(clipboardText);
+          }
+        }
+
+        if (navigator.vibrate) navigator.vibrate(40);
+        ons.notification.toast('Verso copiado a la papelera.', { timeout: 2000 });
+      } catch (err) {
+        console.error('Error copying verse:', err);
+        ons.notification.toast('No se pudo copiar: ' + ((err && err.message) || err), { timeout: 5000 });
+      }
+    };
+
+    let pressTimer = null, pressFired = false, pressX = 0, pressY = 0;
+    const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
+
+    item.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return; // desktop uses contextmenu
+      pressFired = false;
+      pressX = e.clientX;
+      pressY = e.clientY;
+      pressTimer = setTimeout(() => {
+        pressFired = true;
+        copyVerse();
+      }, 600);
+    });
+    item.addEventListener('pointermove', (e) => {
+      if (pressTimer && (Math.abs(e.clientX - pressX) > 10 || Math.abs(e.clientY - pressY) > 10)) cancelPress();
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((evt) => item.addEventListener(evt, cancelPress));
+
+    // Swallow the tap that follows a long-press so it doesn't toggle the translation
+    item.addEventListener('click', (e) => {
+      if (pressFired) {
+        pressFired = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, true);
+
+    item.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelPress();
+      copyVerse(); // dedupe guard inside copyVerse prevents a double copy
+    });
 
     // Double-tap toggles all translations
     item.toggleExpansion = () => {};

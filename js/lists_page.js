@@ -374,8 +374,8 @@ function render_tattvaLists(page) {
     ] },
     { icon: "skrsna", label: "Śrī Kṛṣṇa", files: [
       {
-        title: 'janama saphala tā’ra, kṛṣṇa daraśana jā’ra',
-        firstline: 'janama saphala tara krsna darasana jara',
+        title: 'janama safala tā’ra, kṛṣṇa daraśana jā’ra',
+        firstline: 'janama safala tara krsna darasana jara',
         file: 'e3.json' },
       {
         title: 'bandhu-saṅge jadi tava raṅga parihāsa',
@@ -876,6 +876,8 @@ function initSlideshow(wrapper) {
 
   // Random order every time the page opens
   const items = shuffleArray(SLIDESHOW_ITEMS);
+  layerA.classList.remove('slide-visible');
+  layerB.classList.remove('slide-visible');
 
   if (_slideshowIntervalId !== null) {
     clearInterval(_slideshowIntervalId);
@@ -979,22 +981,26 @@ function initSlideshow(wrapper) {
     startInterval();
   }
 
-  wrapper.addEventListener('mouseenter', () => {
-    isHovering = true;
-    stopInterval();
-    const visibleImg = wrapper.querySelector('.slide-visible .slideshow');
-    if (visibleImg) visibleImg.style.animationIterationCount = 'infinite';
-  });
+  wrapper.onmouseenter = null;
+  wrapper.onmouseleave = null;
+  if (window.matchMedia('(hover: hover)').matches) {
+    wrapper.onmouseenter = () => {
+      isHovering = true;
+      stopInterval();
+      const visibleImg = wrapper.querySelector('.slide-visible .slideshow');
+      if (visibleImg) visibleImg.style.animationIterationCount = 'infinite';
+    };
 
-  wrapper.addEventListener('mouseleave', () => {
-    isHovering = false;
-    const visibleImg = wrapper.querySelector('.slide-visible .slideshow');
-    if (visibleImg) {
-      visibleImg.style.animationIterationCount = '';
-      visibleImg.style.animation = 'none';
-      void visibleImg.offsetWidth;
-      visibleImg.style.animation = '';
-    }
-    if (items.length > 1) startInterval();
-  });
+    wrapper.onmouseleave = () => {
+      isHovering = false;
+      const visibleImg = wrapper.querySelector('.slide-visible .slideshow');
+      if (visibleImg) {
+        visibleImg.style.animationIterationCount = '';
+        visibleImg.style.animation = 'none';
+        void visibleImg.offsetWidth;
+        visibleImg.style.animation = '';
+      }
+      if (items.length > 1) startInterval();
+    };
+  }
 }

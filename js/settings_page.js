@@ -82,7 +82,7 @@ function settings_page_init(page) {
     { value: "'Charis SIL', serif",        label: 'Charis SIL (Literario)' },
     { value: "'Nunito Sans', sans-serif",  label: 'Nunito Sans (Limpio)' },
     { value: "'Gentium Book', serif",      label: 'Gentium Book (Clásico)' },
-    { value: "'Sassoon', sans-serif",      label: 'Sassoon (Leible)' },
+    { value: "'Sassoon Book', sans-serif",  label: 'Sassoon (Leible)' },
     { value: "'Libre Baskerville', serif", label: 'Baskerville (Formal)' },
     { value: "'Sansita', sans-serif",      label: 'Sansita (Expresivo)' }
   ];
@@ -205,6 +205,7 @@ function settings_page_init(page) {
         if (!parsed.IDX) throw new Error('Formato de índice inválido');
 
         localStorage.setItem('kirtan:IDX_db', jsonText);
+        localStorage.setItem('kirtan:IDX_db_ver', (document.title.match(/v\d+\.\d+(?:\.\d+)?/) || [''])[0]);
 
         window.INDEX = {};
         parsed.IDX.forEach(item => {
@@ -212,6 +213,8 @@ function settings_page_init(page) {
             window.INDEX[item.file_name] = item;
           }
         });
+        sortedToc = null;              // rebuild all-songs list
+        initFuseIndex(window.INDEX);   // rebuild search
 
         updateBtn.classList.remove('is-working');
         updateBtn.classList.add('is-success');

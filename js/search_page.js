@@ -310,7 +310,7 @@ function render_searchUI(page, query, clickHandler, listId, minLength) {
     renderSearchResults(listElement, results, clickHandler);
   } else {
     listElement.innerHTML =
-      "<span style='padding:20px; display:block; background-color: var(--gray-darker); color: var(--highlight);'>Found this match for your query:</span>";
+      "<span style='padding:20px; display:block; background-color: var(--gray-darker); color: var(--highlight);'>Sin resultados. Tal vez te sirva esta canción:</span>";
  
     const fallbackId = getFallbackSongId();
     if (fallbackId !== -1) {

@@ -124,7 +124,99 @@ function shell_page_init(page) {
     popover.hide();
     window.createListFromRecents();
   };
- 
+
+  // --- Swipe navigation between Home and Lists with edge wave indicator ---
+  const waveLeft = document.createElement('div');
+  waveLeft.className = 'tab-edge-wave left';
+  const waveRight = document.createElement('div');
+  waveRight.className = 'tab-edge-wave right';
+  page.appendChild(waveLeft);
+  page.appendChild(waveRight);
+
+  function releaseEdgeWaves() {
+    [waveLeft, waveRight].forEach((w) => {
+      w.classList.remove('dragging');
+      w.style.opacity = '';
+      w.style.transform = '';
+    });
+  }
+
+  function dragEdgeWave(side, progress) {
+    const wave = side === 'left' ? waveLeft : waveRight;
+    const other = side === 'left' ? waveRight : waveLeft;
+    other.classList.remove('dragging');
+    other.style.opacity = '';
+    other.style.transform = '';
+
+    const offset = (1 - progress) * 44;
+    wave.classList.add('dragging');
+    wave.style.opacity = String(0.15 + progress * 0.5);
+    wave.style.transform = `translateX(${side === 'left' ? -offset : offset}px)`;
+  }
+
+  page.addEventListener('touchmove', (e) => {
+    if (!isSwiping || navEl.stackLength > 1) return;
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+    if (Math.abs(dx) < Math.abs(dy) * 1.5) { releaseEdgeWaves(); return; }
+
+    const isHome = btnHome.classList.contains('active');
+    const progress = Math.min(1, Math.abs(dx) / 120);
+
+    if (isHome && dx > 0) dragEdgeWave('left', progress);
+    else if (!isHome && dx < 0) dragEdgeWave('right', progress);
+    else releaseEdgeWaves();
+  }, { passive: true });
+
+  page.addEventListener('touchcancel', () => { isSwiping = false; releaseEdgeWaves(); }, { passive: true });
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let isSwiping = false;
+
+  page.addEventListener('touchstart', (e) => {
+    // Only allow swipe if we are at the root shell page (Home or Lists)
+    if (navEl.stackLength > 1) return;
+    if (e.touches.length !== 1) return;
+    // Don't trigger if swiping inside an already-interactive horizontal slider (like recents)
+    if (e.target.closest('#recents-items, ons-switch, ons-range, .recent-swipe-item')) return;
+
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    isSwiping = true;
+  }, { passive: true });
+
+  page.addEventListener('touchend', (e) => {
+    releaseEdgeWaves();
+    if (!isSwiping || navEl.stackLength > 1) {
+      isSwiping = false;
+      return;
+    }
+    isSwiping = false;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffX = touchEndX - touchStartX;
+    const diffY = touchEndY - touchStartY;
+
+    // Must be predominantly a horizontal swipe of at least 45px
+    if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+      const isHome = btnHome.classList.contains('active');
+
+      if (diffX < 0) {
+        // Swiping LEFT (finger moves right-to-left)
+        if (isHome) {
+          activateTab('lists');
+        }
+      } else {
+        // Swiping RIGHT (finger moves left-to-right)
+        if (!isHome) {
+          activateTab('home');
+        }
+      }
+    }
+  }, { passive: true });
+
   activateTab('home');
 }
  
@@ -134,8 +226,8 @@ function gen_swipeableRecentItem(text, subtitle, onClick, onDelete) {
   item.className = 'recent-swipe-item';
   item.innerHTML = `
     <div class="center recent-item-center">
-      <div class="list-item-title">${text}</div>
-      ${subtitle ? `<div class="list-item-author">${subtitle}</div>` : ''}
+      <div class="list-item-title">${escapeHtml(text)}</div>
+      ${subtitle ? `<div class="list-item-author">${escapeHtml(subtitle)}</div>` : ''}
     </div>
     <div class="right recent-delete-btn"
          style="transform:translateX(100%); transition:transform .25s ease;">

@@ -140,7 +140,7 @@ function pronounce_page_init(page) {
                 style="color: var(--second-highlight-color);">
             ${roman}
           </span>
-          ${note ? `<span class="list-item__subtitle; margin-right=0;">${note}</span>` : '“” como en “”'}
+          ${note ? `<span class="list-item__subtitle">${note}</span>` : '“” como en “”'}
         </div>
       </ons-list-item>
     `);

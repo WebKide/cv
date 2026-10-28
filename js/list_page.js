@@ -125,7 +125,7 @@ function gen_swipeableListItem(text, songId, onClick, onDelete) {
         <path d="M9 3.9c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2M15 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2M9 9.9c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m-6 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2"/>
       </svg>
     </div>
-    <div class="center recent-item-center">${text}</div>
+    <div class="center recent-item-center">${escapeHtml(text)}</div>
     <div class="right recent-delete-btn"
          style="transform:translateX(100%); transition:transform .25s ease;">
       <svg viewBox="0 0 24 24" width="32" height="32" fill="#fff" aria-hidden="true" focusable="false">
@@ -224,7 +224,7 @@ function gen_swipeableListItem(text, songId, onClick, onDelete) {
 if (!window._listSwipeOutsideListenerInstalled) {
   window._listSwipeOutsideListenerInstalled = true;
   document.addEventListener('click', (e) => {
-    document.querySelectorAll('#list-list .recent-swipe-item.swiped').forEach((el) => {
+    document.querySelectorAll('#list-list .recent-swipe-item.swiped, #custom-lists .recent-swipe-item.swiped').forEach((el) => {
       if (!el.contains(e.target) && typeof el._closeSwipe === 'function') {
         el._closeSwipe();
       }
